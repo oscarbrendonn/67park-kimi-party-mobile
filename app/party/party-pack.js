@@ -1,3 +1,4 @@
+import {createParkLaunchers} from "./park-launchers.js?v=1";
 // 67 Park party pack. Adds an Eggy Party style feel on top of the island without touching its
 // systems: springy jump and landing squash, punches and throws that reach other players, a
 // jump pads, park bots that fly when punched, synthesized sounds, haptics and a settings panel.
@@ -70,6 +71,7 @@ window.__partyStep = guard((body, input, dt, map) => {
   previousHeld = held;
   if (map !== 'city' || !world()) return;
   items.step(body, dt);
+  stepRings(dt);
   remotePops.step(dt);
   botFlights.step();
 });
@@ -340,114 +342,11 @@ function stepRings(dt) {
   }
 }
 
-// ---------- jump pads ----------
-const items = (() => {
-  let w = null, pads = [], padCooldown = 0, group = null;
-  const padTexture = () => {
-    const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
-    g.fillStyle = '#fff3d6'; g.beginPath(); g.arc(256, 256, 250, 0, Math.PI * 2); g.fill();
-    g.save(); g.translate(256, 256); g.fillStyle = '#ff8fb8';
-    for (let i = 0; i < 8; i++) { g.rotate(Math.PI / 4); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 250, -Math.PI / 16, Math.PI / 16); g.closePath(); g.fill(); }
-    g.restore();
-    g.lineWidth = 22; g.strokeStyle = '#ffffff'; g.beginPath(); g.arc(256, 256, 236, 0, Math.PI * 2); g.stroke();
-    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(256, 256, 150, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#ff5f9e'; g.beginPath(); g.moveTo(256, 116); g.lineTo(356, 236); g.lineTo(300, 236); g.lineTo(300, 380); g.lineTo(212, 380); g.lineTo(212, 236); g.lineTo(156, 236); g.closePath(); g.fill();
-    g.lineWidth = 12; g.strokeStyle = '#ffffff'; g.stroke();
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
-  };
-  const starTexture = () => {
-    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
-    g.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 12 : 28; g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } g.closePath();
-    g.fillStyle = '#ffd54a'; g.fill(); g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-  };
-  let starTex = null; const bursts = [];
-  const burst = (x, y, z) => {
-    if (!starTex) starTex = starTexture();
-    for (let i = 0; i < 9; i++) {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map: starTex, transparent: true, depthWrite: false}));
-      const a = i / 9 * Math.PI * 2, r = 0.45 + Math.random() * 0.3; sp.scale.setScalar(0.32 + Math.random() * 0.2);
-      sp.position.set(x + Math.cos(a) * 0.4, y + 0.3, z + Math.sin(a) * 0.4); sp.name = 'PARTY_star'; group.add(sp);
-      bursts.push({sp, vx: Math.cos(a) * 2.2 * r, vy: 5 + Math.random() * 2.5, vz: Math.sin(a) * 2.2 * r, t: 0});
-    }
-  };
-  const stepBursts = dt => {
-    for (let i = bursts.length - 1; i >= 0; i--) { const b = bursts[i]; b.t += dt; b.vy -= 14 * dt; b.sp.position.x += b.vx * dt; b.sp.position.y += b.vy * dt; b.sp.position.z += b.vz * dt; b.sp.material.rotation += 4 * dt; b.sp.material.opacity = Math.max(0, 1 - b.t / 0.8); if (b.t > 0.8) { b.sp.removeFromParent(); b.sp.material.dispose(); bursts.splice(i, 1); } }
-  };
-  const makePad = (x, y, z, tex) => {
-    const pad = new THREE.Group(); pad.name = 'PARTY_pad'; pad.position.set(x, y, z);
-    const pink = new THREE.MeshStandardMaterial({color: '#ff7fb0', roughness: 0.55, metalness: 0});
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.38, 0.2, 48), pink); base.position.y = 0.1; base.castShadow = true; base.receiveShadow = true;
-    const lip = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.07, 12, 48), new THREE.MeshStandardMaterial({color: '#ffffff', roughness: 0.5})); lip.rotation.x = Math.PI / 2; lip.position.y = 0.2;
-    const springs = new THREE.Group(); const coil = new THREE.MeshStandardMaterial({color: '#e9eef5', roughness: 0.35, metalness: 0.25});
-    for (let i = 0; i < 3; i++) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.06, 10, 40), coil); ring.rotation.x = Math.PI / 2; ring.position.y = 0.06 + i * 0.09; springs.add(ring); }
-    springs.position.y = 0.2;
-    const top = new THREE.Group(); top.position.y = 0.44;
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 0.98, 0.16, 48), [new THREE.MeshStandardMaterial({color: '#ff9fc4', roughness: 0.5}), new THREE.MeshStandardMaterial({map: tex, roughness: 0.45}), new THREE.MeshStandardMaterial({color: '#ff9fc4'})]);
-    disc.castShadow = true; disc.receiveShadow = true;
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.06, 0.06, 12, 48), new THREE.MeshStandardMaterial({color: '#ffffff', roughness: 0.5})); rim.rotation.x = Math.PI / 2; rim.position.y = 0.08;
-    top.add(disc, rim);
-    const glow = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.75, 48), new THREE.MeshBasicMaterial({color: '#ffb3d1', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide})); glow.rotation.x = -Math.PI / 2; glow.position.y = 0.03;
-    pad.add(base, lip, springs, top, glow);
-    return {group: pad, top, springs, glow, x, y, z, squash: 0, vel: 0, phase: Math.random() * 6};
-  };
-  const centerOf = name => { const o = scene()?.getObjectByName?.(name); if (!o) return null; const b = new THREE.Box3().setFromObject(o); if (b.isEmpty()) return null; const c = b.getCenter(new THREE.Vector3()); return {x: c.x, z: c.z}; };
-  const validSpot = (x, z) => { const g = groundAt(x, z); if (g === null || isWater(x, z)) return false; const t = terrainAt(x, z); if (t !== null && Math.abs(g - t) > 0.5) return false; for (const [dx, dz] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3]]) { const gg = groundAt(x + dx, z + dz); if (gg === null || Math.abs(gg - g) > 0.35) return false; } return true; };
-  const build = () => {
-    const s = scene(); if (!s) return;
-    group = new THREE.Group(); group.name = 'PARTY_items'; s.add(group);
-    const spawn = Array.isArray(w.spawn) && w.spawn.length === 3 ? w.spawn : [167, 7, 120];
-    const fountain = centerOf('67D_CENTER_FOUNTAIN_BASIN');
-    const candidates = [
-      {x: spawn[0] - 6, z: spawn[2] + 5}, {x: spawn[0] + 7, z: spawn[2] - 6},
-      centerOf('67D_SKATEPARK_BASE'), centerOf('PLAZA83_WALKABLE_GROUND'), fountain && {x: fountain.x + 9, z: fountain.z},
-    ].filter(Boolean);
-    const tex = padTexture();
-    for (const c of candidates) {
-      let spot = null;
-      for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2], [3, 3], [-3, -3], [4, 0], [0, 4]]) if (validSpot(c.x + dx, c.z + dz)) { spot = {x: c.x + dx, z: c.z + dz}; break; }
-      if (!spot || pads.some(p => Math.hypot(p.x - spot.x, p.z - spot.z) < 6)) continue;
-      const y = groundAt(spot.x, spot.z);
-      const pad = makePad(spot.x, y, spot.z, tex); group.add(pad.group); pads.push(pad);
-    }
-    log('pads', pads.length);
-  };
-  const stepPads = (body, dt) => {
-    padCooldown = Math.max(0, padCooldown - dt);
-    const t = body?.translation?.(); const lv = body?.linvel?.();
-    const now = performance.now() / 1000;
-    for (const pad of pads) {
-      // squash is a damped spring around 0: negative = pressed down, positive = popped up
-      const acc = -160 * pad.squash - 11 * pad.vel; pad.vel += acc * dt; pad.squash += pad.vel * dt;
-      const bob = Math.sin(now * 2 + pad.phase) * 0.012;
-      pad.top.position.y = 0.44 + bob + pad.squash * 0.35; pad.top.scale.y = clamp(1 + pad.squash * 0.9, 0.35, 1.5); pad.top.scale.x = pad.top.scale.z = clamp(1 - pad.squash * 0.35, 0.8, 1.2);
-      pad.springs.scale.y = clamp(1 + pad.squash * 0.8, 0.3, 1.4);
-      pad.glow.material.opacity = 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(now * 3 + pad.phase)); pad.glow.rotation.z = now * 0.4;
-      if (!t || !lv || padCooldown > 0) continue;
-      const d = Math.hypot(t.x - pad.x, t.z - pad.z), dy = t.y - pad.y;
-      if (d < 1.2 && dy > -0.3 && dy < 1.3 && lv.y <= 0.8) {
-        const st = state(); if (!st?.enabled) continue;
-        try { body.setLinvel({x: lv.x, y: 12.5, z: lv.z}, true); } catch { continue; }
-        st.grounded = false; st.hover = false; st.airT = 0; st.jumpsLeft = 1; st.stretch = 1; st.fallPeak = 0; st.verticalVelocity = 12.5;
-        pad.squash = -0.75; pad.vel = -6; padCooldown = 0.55; kick(0.28); sfx.play('pad'); buzz([15, 30, 25]);
-        fxRing([pad.x, pad.y + 0.1, pad.z], '#ffffff'); burst(pad.x, pad.y + 0.4, pad.z);
-      }
-    }
-  };
-  return {
-    step(body, dt) {
-      const cur = world();
-      if (cur !== w) { w = cur; pads = []; if (group) { group.removeFromParent(); group = null; } if (w?.ground && scene()) { try { build(); } catch (e) { log('build failed', e); } } }
-      if (!group) return;
-      for (const pad of pads) pad.group.visible = !!settings.pads;
-      if (settings.pads) stepPads(body, dt);
-      stepBursts(dt);
-      stepRings(dt);
-    },
-    count() { return {pads: pads.length}; },
-    debug() { return {pads: pads.map(p => ({x: p.x, y: p.y, z: p.z}))}; },
-  };
-})();
+// ---------- bounded city hatches and park trampolines ----------
+const items = createParkLaunchers({world,scene,state,settings,reducedMotion,remotes:()=>net()?.remotes,
+ blocked:()=>document.hidden||!!document.querySelector('.wardrobe,dialog[open],#party-settings:not([hidden])'),
+ onLaunch(){if(settings.juice&&!reducedMotion())kick(.28);sfx.play('pad');buzz([15,30,25]);}
+});
 
 // ---------- controls: throw button (touch) and keyboard ----------
 function installControls() {
