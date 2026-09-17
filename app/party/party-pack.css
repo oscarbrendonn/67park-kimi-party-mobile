@@ -22,23 +22,24 @@
 @media (pointer:coarse){#party-settings-btn{top:calc(var(--preview-top,24px) + 160px);right:12px}}
 
 
-/* Eggy style action buttons: chunky, glossy, illustrated. Punch is the game's own button restyled in place. */
-.party-eggy{position:fixed;z-index:50;width:82px;height:82px;border-radius:50%;border:3px solid #fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;margin:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;color:#fff;font:800 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;text-transform:uppercase;letter-spacing:.06em;text-shadow:0 1px 0 rgba(0,0,0,.28);background:linear-gradient(180deg,var(--eggy-hi),var(--eggy-lo));box-shadow:0 6px 0 var(--eggy-shade),0 12px 20px rgba(60,20,40,.28),inset 0 3px 0 rgba(255,255,255,.55);transition:transform 90ms ease-out,box-shadow 90ms ease-out}
-.party-eggy svg{width:46px;height:46px;margin-top:-2px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.18))}
-.party-eggy span{margin-top:-3px}
-.party-eggy:active{transform:translateY(5px);box-shadow:0 1px 0 var(--eggy-shade),0 4px 10px rgba(60,20,40,.25),inset 0 3px 0 rgba(255,255,255,.55)}
-.party-eggy .party-key{position:absolute;right:-4px;top:-4px;width:22px;height:22px;border-radius:7px;background:#fff;color:#6b2a4a;font:800 12px/22px system-ui,sans-serif;font-style:normal;text-align:center;text-shadow:none;box-shadow:0 2px 0 rgba(0,0,0,.18)}
-.party-eggy-pink{--eggy-hi:#ffa8cb;--eggy-lo:#f2588f;--eggy-shade:#b93a68}
-.party-eggy-blue{--eggy-hi:#a6dbff;--eggy-lo:#4aa3e8;--eggy-shade:#2f6fa8}
-#party-throw{right:114px;bottom:calc(280px + env(safe-area-inset-bottom,0px))}
-/* The park's round action buttons get the same candy treatment (their own colour classes drive the tint). */
-.park-action{border:3px solid #fff!important;color:#fff!important;background:linear-gradient(180deg,var(--eggy-hi,#ffffff),var(--eggy-lo,#dfe6ee))!important;box-shadow:0 5px 0 var(--eggy-shade,#aab6c3),0 9px 16px rgba(60,20,40,.22),inset 0 2px 0 rgba(255,255,255,.55)!important;text-shadow:0 1px 0 rgba(0,0,0,.22);backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.park-action svg{stroke-width:2.3!important;filter:drop-shadow(0 1px 0 rgba(0,0,0,.2))}
-.park-action span{font-weight:800!important;letter-spacing:.06em}
-.park-action:active{transform:translateY(4px)!important;box-shadow:0 1px 0 var(--eggy-shade,#aab6c3),0 3px 8px rgba(60,20,40,.2),inset 0 2px 0 rgba(255,255,255,.55)!important;background:linear-gradient(180deg,var(--eggy-hi,#ffffff),var(--eggy-lo,#dfe6ee))!important}
-.park-action:hover{background:linear-gradient(180deg,var(--eggy-hi,#ffffff),var(--eggy-lo,#dfe6ee))!important}
-.park-action.lilac{--eggy-hi:#dcc9ff;--eggy-lo:#a98af2;--eggy-shade:#7a5cc4}
-.park-action.cream{--eggy-hi:#ffeaa9;--eggy-lo:#f7c548;--eggy-shade:#c6942a}
-.park-action.blue{--eggy-hi:#addcff;--eggy-lo:#5aa9ec;--eggy-shade:#3a78b8}
-.park-action.mint{--eggy-hi:#bcf1dc;--eggy-lo:#5fcf9f;--eggy-shade:#3a9a72}
-.park-action.pink,.park-action.primary{--eggy-hi:#ffa8cb;--eggy-lo:#f2588f;--eggy-shade:#b93a68}
+/* 67 Park action buttons: glossy layered body with a plum outline, white rim, colour gradient, top gloss and a bottom shade. */
+.party-eggy,.park-action{position:relative!important;overflow:hidden;border:3px solid #fff!important;color:#fff!important;background:radial-gradient(120% 90% at 50% 0%,var(--eggy-hi) 0%,var(--eggy-lo) 70%)!important;box-shadow:0 0 0 1.5px rgba(61,43,74,.55),0 4px 0 var(--eggy-shade),0 8px 14px rgba(60,20,40,.22),inset 0 -5px 0 rgba(0,0,0,.08)!important;text-shadow:0 1px 0 rgba(0,0,0,.28);backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.party-eggy::before,.park-action::before{content:"";position:absolute;left:16%;top:5%;width:68%;height:30%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,0));pointer-events:none}
+.party-eggy:active,.park-action:active{transform:translateY(3px)!important;box-shadow:0 0 0 1.5px rgba(61,43,74,.55),0 1px 0 var(--eggy-shade),0 3px 8px rgba(60,20,40,.2),inset 0 -5px 0 rgba(0,0,0,.08)!important;background:radial-gradient(120% 90% at 50% 0%,var(--eggy-hi) 0%,var(--eggy-lo) 70%)!important}
+.park-action:hover{background:radial-gradient(120% 90% at 50% 0%,var(--eggy-hi) 0%,var(--eggy-lo) 70%)!important}
+.park-action>svg:not(.party-icon){display:none!important}
+.park-action .party-icon{order:1;width:34px;height:34px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.16))}
+.park-action span{order:2;font-weight:800!important;letter-spacing:.06em}
+.park-action{--eggy-hi:#ffffff;--eggy-lo:#d9e1ec;--eggy-shade:#9fabba}
+.park-action.lilac{--eggy-hi:#e6d8ff;--eggy-lo:#a98af2;--eggy-shade:#7455c2}
+.park-action.cream{--eggy-hi:#fff1bd;--eggy-lo:#f7c548;--eggy-shade:#c08f24}
+.park-action.blue{--eggy-hi:#c6e6ff;--eggy-lo:#5aa9ec;--eggy-shade:#3572b3}
+.park-action.mint{--eggy-hi:#cff6e4;--eggy-lo:#5fcf9f;--eggy-shade:#35956c}
+.park-action.pink,.park-action.primary{--eggy-hi:#ffc3da;--eggy-lo:#f2588f;--eggy-shade:#b43363}
+.party-eggy{position:fixed!important;z-index:50;width:76px;height:76px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;margin:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;font:800 10px/1 system-ui,-apple-system,"Segoe UI",sans-serif;text-transform:uppercase;letter-spacing:.06em;transition:transform 90ms ease-out,box-shadow 90ms ease-out}
+.party-eggy .party-icon{width:40px;height:40px;margin-top:-1px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.16))}
+.party-eggy span{margin-top:-2px}
+.party-eggy .party-key{position:absolute;right:6px;top:6px;width:18px;height:18px;border-radius:6px;background:#fff;color:#3d2b4a;font:800 11px/18px system-ui,sans-serif;font-style:normal;text-align:center;text-shadow:none;box-shadow:0 0 0 1.5px rgba(61,43,74,.45)}
+.party-eggy-pink{--eggy-hi:#ffc3da;--eggy-lo:#f2588f;--eggy-shade:#b43363}
+.party-eggy-blue{--eggy-hi:#c6e6ff;--eggy-lo:#4aa3e8;--eggy-shade:#2f6fa8}
+#party-throw{right:108px;bottom:calc(280px + env(safe-area-inset-bottom,0px))}

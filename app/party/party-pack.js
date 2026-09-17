@@ -397,6 +397,8 @@ const items = (() => {
     pad.add(base, lip, springs, top, glow);
     return {group: pad, top, springs, glow, x, y, z, squash: 0, vel: 0, phase: Math.random() * 6};
   };
+  const centerOf = name => { const o = scene()?.getObjectByName?.(name); if (!o) return null; const b = new THREE.Box3().setFromObject(o); if (b.isEmpty()) return null; const c = b.getCenter(new THREE.Vector3()); return {x: c.x, z: c.z}; };
+  const validSpot = (x, z) => { const g = groundAt(x, z); if (g === null || isWater(x, z)) return false; const t = terrainAt(x, z); if (t !== null && Math.abs(g - t) > 0.5) return false; for (const [dx, dz] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3]]) { const gg = groundAt(x + dx, z + dz); if (gg === null || Math.abs(gg - g) > 0.35) return false; } return true; };
   const build = () => {
     const s = scene(); if (!s) return;
     group = new THREE.Group(); group.name = 'PARTY_items'; s.add(group);
@@ -471,21 +473,71 @@ function installControls() {
   }
   installEggyButtons();
 }
-// Cartoon icons (white fills with dark outlines) in the Eggy Party spirit. No emoji.
+// 67 Park icon set for the action buttons: glossy cartoon shapes with a plum outline, drawn once as
+// inline SVG (no emoji, no bitmaps). Shared gradients live in one hidden <svg> in the document.
+const OUT = '#3d2b4a';
+const DEFS = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'
+  + '<linearGradient id="pg-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dfe6f2"/></linearGradient>'
+  + '<linearGradient id="pg-y" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#ffb42a"/></linearGradient>'
+  + '<linearGradient id="pg-p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffbcd6"/><stop offset="1" stop-color="#ff6fa3"/></linearGradient>'
+  + '<linearGradient id="pg-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe1ff"/><stop offset="1" stop-color="#5aa9ec"/></linearGradient>'
+  + '<linearGradient id="pg-m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9f4e0"/><stop offset="1" stop-color="#5fcf9f"/></linearGradient>'
+  + '</defs></svg>';
+const svg = inner => `<svg class="party-icon" viewBox="0 0 64 64" aria-hidden="true">${inner}</svg>`;
+const st = (extra = '') => `stroke="${OUT}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" ${extra}`;
 const ICONS = {
-  punch: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M17 27c0-4 3-7 7-7h2c1-4 4-7 8-7s7 3 8 7h3c4 0 7 3 7 7v11c0 8-6 14-14 14H27c-6 0-10-4-10-10z" fill="#fff" stroke="#6b2a4a" stroke-width="3.2" stroke-linejoin="round"/><path d="M26 20v10M34 13v17M42 20v10" fill="none" stroke="#6b2a4a" stroke-width="3" stroke-linecap="round"/><path d="M12 33c0-3 2-5 5-5v18c-3 0-5-2-5-5z" fill="#ffd54a" stroke="#6b2a4a" stroke-width="3" stroke-linejoin="round"/><path d="M8 46h5" stroke="#6b2a4a" stroke-width="3" stroke-linecap="round"/><path d="M50 10l3-4M55 16l5-2M53 7l6-3" stroke="#6b2a4a" stroke-width="3" stroke-linecap="round"/></svg>',
-  throw: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="20" cy="42" r="9" fill="#fff" stroke="#2f4a63" stroke-width="3.2"/><circle cx="17" cy="41" r="1.6" fill="#2f4a63"/><circle cx="23" cy="41" r="1.6" fill="#2f4a63"/><path d="M17 45c2 1.5 4 1.5 6 0" fill="none" stroke="#2f4a63" stroke-width="2.4" stroke-linecap="round"/><path d="M27 26c6-10 16-13 26-8" fill="none" stroke="#2f4a63" stroke-width="4" stroke-linecap="round"/><path d="M46 12l8 6-8 6" fill="#fff" stroke="#2f4a63" stroke-width="3.2" stroke-linejoin="round"/><path d="M8 26l5 2M9 33l5-1" stroke="#2f4a63" stroke-width="3" stroke-linecap="round"/></svg>',
+  punch: svg(`<rect x="9" y="36" width="15" height="15" rx="5" fill="url(#pg-y)" ${st()}/>`
+    + `<path d="M22 22c0-5 4-9 9-9h9c8 0 14 6 14 14v9c0 8-6 14-14 14H30c-5 0-8-3-8-8z" fill="url(#pg-w)" ${st()}/>`
+    + `<path d="M33 14v11M42 14v11" fill="none" ${st('stroke-width="2.6"')}/>`
+    + `<path d="M22 29c-5 0-8 3-8 7s3 7 8 7" fill="url(#pg-w)" ${st()}/>`
+    + `<ellipse cx="41" cy="19" rx="6" ry="2.6" fill="#fff" opacity=".8"/>`
+    + `<path d="M55 11l3-5M58 20l5-2M50 7l0-5" fill="none" ${st()}/>`),
+  throw: svg(`<path d="M13 40c-3-4-1-9 3-9l9 4V23c0-3 5-3 5 0v10l3-1c3-1 6 1 6 4v6c0 7-5 12-12 12h-3c-4 0-7-2-9-5z" fill="url(#pg-w)" ${st()}/>`
+    + `<ellipse cx="47" cy="17" rx="8" ry="10" fill="url(#pg-p)" ${st()}/>`
+    + `<circle cx="44" cy="15" r="1.5" fill="${OUT}"/><circle cx="50" cy="15" r="1.5" fill="${OUT}"/><path d="M44 21c2 1.5 4 1.5 6 0" fill="none" ${st('stroke-width="2.2"')}/>`
+    + `<ellipse cx="45" cy="10" rx="3" ry="1.6" fill="#fff" opacity=".8"/>`
+    + `<path d="M28 12l6 2M26 20l5-1M33 6l4 4" fill="none" ${st('stroke-width="2.6"')}/>`),
+  jump: svg(`<path d="M32 7l20 22H41v18H23V29H12z" fill="url(#pg-w)" ${st()}/>`
+    + `<ellipse cx="30" cy="19" rx="5" ry="2.4" fill="#fff" opacity=".85"/>`
+    + `<path d="M17 56h30" fill="none" ${st('stroke-width="4"')}/>`),
+  sprint: svg(`<path d="M37 5L13 36h15l-5 23 25-33H34z" fill="url(#pg-y)" ${st()}/>`
+    + `<ellipse cx="30" cy="16" rx="4" ry="2" fill="#fff" opacity=".8"/>`),
+  interact: svg(`<rect x="18" y="11" width="7" height="24" rx="3.5" fill="url(#pg-w)" ${st()}/><rect x="27" y="7" width="7" height="28" rx="3.5" fill="url(#pg-w)" ${st()}/><rect x="36" y="9" width="7" height="26" rx="3.5" fill="url(#pg-w)" ${st()}/><rect x="45" y="15" width="7" height="20" rx="3.5" fill="url(#pg-w)" ${st()}/>`
+    + `<path d="M18 30h34v8c0 10-7 18-17 18h-2c-6 0-10-3-12-8l-8-11c-2-3 2-7 6-4l-1 0z" fill="url(#pg-w)" ${st()}/>`
+    + `<ellipse cx="34" cy="36" rx="8" ry="2.5" fill="#fff" opacity=".8"/>`),
+  exit: svg(`<rect x="10" y="9" width="26" height="46" rx="4" fill="url(#pg-w)" ${st()}/><circle cx="30" cy="33" r="2.5" fill="${OUT}"/>`
+    + `<path d="M36 32h19M49 24l8 8-8 8" fill="none" ${st('stroke-width="4"')}/>`),
+  skate: svg(`<path d="M9 30c3-6 43-6 46 0l0 5c-3 6-43 6-46 0z" fill="url(#pg-b)" ${st()}/>`
+    + `<circle cx="21" cy="46" r="5.5" fill="url(#pg-w)" ${st()}/><circle cx="43" cy="46" r="5.5" fill="url(#pg-w)" ${st()}/>`
+    + `<path d="M21 40v-4M43 40v-4" fill="none" ${st('stroke-width="2.6"')}/><ellipse cx="24" cy="29" rx="8" ry="1.6" fill="#fff" opacity=".7"/>`),
+  walk: svg(`<ellipse cx="23" cy="24" rx="7.5" ry="12" fill="url(#pg-w)" ${st()}/><circle cx="23" cy="42" r="4.5" fill="url(#pg-w)" ${st()}/>`
+    + `<ellipse cx="42" cy="34" rx="7.5" ry="12" fill="url(#pg-w)" ${st()}/><circle cx="42" cy="52" r="4.5" fill="url(#pg-w)" ${st()}/>`),
+  emote: svg(`<circle cx="32" cy="32" r="22" fill="url(#pg-y)" ${st()}/>`
+    + `<circle cx="24" cy="27" r="3.2" fill="${OUT}"/><circle cx="40" cy="27" r="3.2" fill="${OUT}"/>`
+    + `<path d="M21 38c6 7 16 7 22 0" fill="none" ${st('stroke-width="3.6"')}/><ellipse cx="24" cy="16" rx="6" ry="2.6" fill="#fff" opacity=".85"/>`),
+  bag: svg(`<path d="M24 17v-4c0-5 16-5 16 0v4" fill="none" ${st()}/>`
+    + `<rect x="15" y="17" width="34" height="38" rx="11" fill="url(#pg-b)" ${st()}/>`
+    + `<path d="M15 30h34" fill="none" ${st('stroke-width="2.6"')}/><rect x="22" y="35" width="20" height="14" rx="5" fill="url(#pg-w)" ${st()}/><ellipse cx="26" cy="23" rx="6" ry="2.4" fill="#fff" opacity=".8"/>`),
 };
+const ICON_BY_LABEL = {EMOTE: 'emote', BAG: 'bag', SKATE: 'skate', WALK: 'walk', INTERACT: 'interact', EXIT: 'exit', SPRINT: 'sprint', JUMP: 'jump'};
 function installEggyButtons() {
-  // The game's own Punch button is an element with inline styles; restyle it in place (its click handlers stay).
-  let done = null;
-  const dress = () => {
-    const b = document.getElementById('preview-hit'); if (!b || b === done) return; done = b;
+  if (!document.getElementById('party-defs')) { const d = document.createElement('div'); d.id = 'party-defs'; d.innerHTML = DEFS; document.body.prepend(d); }
+  let dressed = null;
+  const dress = () => { // the game's own Punch button: restyle in place, its click handlers stay
+    const b = document.getElementById('preview-hit'); if (!b || b === dressed) return; dressed = b;
     b.style.cssText = 'position:fixed;right:20px;bottom:calc(280px + env(safe-area-inset-bottom));z-index:50;touch-action:manipulation;';
     b.classList.add('party-eggy', 'party-eggy-pink'); b.innerHTML = ICONS.punch + '<span>Punch</span>' + (isTouch ? '' : '<i class="party-key">F</i>');
   };
-  const tick = () => { try { dress(); } catch {} };
-  tick(); setInterval(tick, 700);
+  const decorate = () => { // the park's round buttons: hide their line icon (CSS) and add the illustrated one, following label changes
+    for (const el of document.querySelectorAll('.park-action')) {
+      const label = (el.querySelector('span')?.textContent || el.getAttribute('aria-label') || '').trim().toUpperCase();
+      const key = Object.keys(ICON_BY_LABEL).find(k => label.startsWith(k)); if (!key) continue;
+      const icon = ICON_BY_LABEL[key]; if (el.dataset.partyIcon === icon) continue;
+      el.querySelector('.party-icon')?.remove(); el.insertAdjacentHTML('beforeend', ICONS[icon]); el.dataset.partyIcon = icon;
+    }
+  };
+  const tick = () => { try { dress(); decorate(); } catch {} };
+  tick(); setInterval(tick, 400);
 }
 
 // ---------- settings panel ----------
