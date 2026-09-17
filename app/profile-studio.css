@@ -1,0 +1,9 @@
+.wardrobe-profile .wardrobe-display-box,.wardrobe-profile .wardrobe-character-title,.wardrobe-profile .wardrobe-demo{display:none!important}
+.wardrobe-profile .wardrobe-stage{background:linear-gradient(180deg,#ead4d4,#f3e2e2 55%,#fff2f2)!important;border-radius:28px;overflow:hidden}
+.wardrobe-profile .wardrobe-header nav button:first-child{display:none}
+.wardrobe-profile .wardrobe-person>button{display:none}
+.wardrobe-profile .wardrobe-header>img{height:36px!important;max-height:none!important;width:130px!important;object-fit:contain}
+.wardrobe-profile .wardrobe-stage canvas{background:transparent!important}
+.wardrobe-returning .wardrobe-main,.wardrobe-returning .wardrobe-header nav{display:none!important}
+.wardrobe-returning{justify-content:center}
+.wardrobe-returning .wardrobe-header:after{content:'Welcome back · Loading your saved character';font:600 16px system-ui;color:#5b535a}

@@ -32,8 +32,10 @@ function buildItem(item){const donor=donors.get(item.donor),src=meshWith(donor.s
   const a=geometry.attributes.position,used=new Set(Array.from(geometry.index.array));src.skeleton.update();
   const box=new T.Box3(),v=new T.Vector3();for(const i of used){src.getVertexPosition(i,v).applyMatrix4(src.matrixWorld);a.setXYZ(i,v.x,v.y,v.z);box.expandByPoint(v)}
   const head=rig.getObjectByName('GORIL_KAFA'),headBox=new T.Box3().setFromObject(head,true),headSize=headBox.getSize(new T.Vector3()),size=box.getSize(new T.Vector3()),center=box.getCenter(new T.Vector3());
-  const factor=item.rigid==='hat'?headSize.x*(item.id==='cap'?.72:.4)/size.x:headSize.x*.86/size.x;
-  const target=new T.Vector3((headBox.min.x+headBox.max.x)/2,item.rigid==='hat'?headBox.max.y-size.y*factor*.22:headBox.min.y+headSize.y*.46,item.rigid==='hat'?.003:headBox.max.z+.009);
+  const factor=item.rigid==='hat'?headSize.x*(item.id==='cap'?.57:.4)/size.x:headSize.x*.86/size.x;
+  // Small, seated cap like the donor: sink the open rim into the curved crown,
+  // not the propeller's bounding-box centre. Keep the original head untouched.
+  const target=new T.Vector3((headBox.min.x+headBox.max.x)/2,item.rigid==='hat'?headBox.max.y-size.y*factor*(item.id==='cap'?.39:.22):headBox.min.y+headSize.y*.46,item.rigid==='hat'?(headBox.min.z+headBox.max.z)/2:headBox.max.z+.009);
   const bone=boneMap(rig).get('Head');const inverse=new T.Matrix4().copy(bone.matrixWorld).invert();
   for(const i of used){v.fromBufferAttribute(a,i);v.x=(v.x-center.x)*factor+target.x;v.y=(v.y-(item.rigid==='hat'?box.min.y:center.y))*factor+target.y;v.z=(v.z-(item.rigid==='hat'?center.z:box.max.z))*factor+target.z;v.applyMatrix4(inverse);a.setXYZ(i,v.x,v.y,v.z)}
   // Unused source vertices do not contribute to bounds, lighting or exports.

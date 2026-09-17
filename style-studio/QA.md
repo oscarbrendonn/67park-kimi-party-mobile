@@ -1,4 +1,19 @@
-# Style Studio preview 1
+# Style Studio preview 4 / profile entry
+
+2026-09-18: profile navigation now opens this studio for Gorilla 67. Friends
+characters retain their existing in-game equipment editor (studio view), not
+a forced gorilla replacement. Character selection is confirmed only on a
+successful park entry. Returning players load the saved character automatically.
+No IP-based identity is used. Clearing browser storage resets this local profile.
+The studio return link retains the game's URL/query within the same repository.
+The propeller cap uses a narrower, lower, head-centred fit; source GLBs unchanged.
+
+IMPORTANT: Gorilla studio outfits remain a saved preview, not in-game equipment
+or multiplayer outfit synchronization. Profile navigation is not an equip bridge.
+See `check-profile.cjs` in the working release folder for the entry/reload/profile
+tests. Physical iPhone/Safari and NFT/account identity are not certified.
+
+## Original preview baseline
 
 Isolated selection-screen prototype. No live game entry, map, online protocol,
 character source file, or existing wardrobe was changed.

@@ -2,3 +2,7 @@
 /* On phones the studio stays visible while the wardrobe itself scrolls. */
 @media(max-width:650px){main{height:calc(100dvh - 72px);min-height:0;padding-bottom:max(12px,env(safe-area-inset-bottom));overflow:hidden}.studio{height:43%;min-height:230px}.studio-title{top:15px;left:20px}.studio-title>p,.studio-title>span{display:none}.studio-title h1{font-size:22px;margin:0}#viewport{inset:42px 0 50px}.stage-footer{bottom:8px}.stage-footer p{display:none}.view-tools button{min-height:38px}.wardrobe{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#d8decd transparent}.wardrobe-heading{padding-bottom:13px}.wardrobe-heading>p{display:none}.wardrobe-heading h2{font-size:21px;margin-bottom:5px}.wardrobe-heading>span{font-size:11px}.announcement{bottom:12px}}
 .studio-title{display:none}.studio{background:linear-gradient(180deg,#ead4d4 0%,#f3e2e2 52%,#fff2f2 100%)}.studio #viewport{inset:0}.stage-footer{pointer-events:none}.stage-footer .view-tools{pointer-events:auto}
+:root .return-to-park{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;background:#fff9f1;color:#534952;border:1px solid #ded2cc;border-radius:18px;font:700 13px system-ui;text-decoration:none;white-space:nowrap}
+:root .return-to-park:focus-visible{outline:3px solid #7f65c3;outline-offset:3px}
+:root .return-to-park:active{transform:scale(.97)}
+@media(max-width:600px){.topbar .preview-tag{display:none}}
