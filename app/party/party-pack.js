@@ -47,7 +47,7 @@ const sfx = (() => {
     jump: () => { tone('sine', 320, 720, 0.13, 0.22, 0.006, 0.09); tone('triangle', 160, 420, 0.1, 0.08, 0.004, 0.06); },
     double: () => { tone('sine', 480, 980, 0.14, 0.2, 0.005, 0.1); tone('sine', 720, 1400, 0.12, 0.1, 0.02, 0.1, 8); },
     land: hard => { burst('lowpass', hard ? 420 : 320, 0.8, hard ? 0.09 : 0.06, hard ? 0.35 : 0.18); tone('sine', hard ? 110 : 90, 45, 0.09, hard ? 0.28 : 0.14, 0.003, 0.08); },
-    pad: () => { tone('triangle', 220, 1100, 0.22, 0.26, 0.006, 0.16); tone('sine', 440, 1650, 0.2, 0.12, 0.03, 0.14); burst('bandpass', 1800, 1.2, 0.05, 0.08); },
+    pad: () => { tone('sine', 190, 95, 0.09, 0.22, 0.004, 0.04); setTimeout(() => can() && (tone('triangle', 240, 1250, 0.24, 0.26, 0.006, 0.18), tone('sine', 480, 1900, 0.22, 0.1, 0.03, 0.16), burst('bandpass', 2200, 1.2, 0.05, 0.07)), 70); },
     swing: () => { burst('bandpass', 900, 0.9, 0.11, 0.16, 0.01, 0.05); },
     hit: () => { burst('lowpass', 500, 0.7, 0.07, 0.4); tone('square', 180, 70, 0.08, 0.22, 0.002, 0.06); tone('sine', 900, 300, 0.05, 0.1, 0.001, 0.03); },
     grab: () => { tone('sine', 520, 260, 0.09, 0.2, 0.003, 0.05); burst('highpass', 2500, 0.8, 0.03, 0.08); },
@@ -350,14 +350,53 @@ function stepRings(dt) {
 const items = (() => {
   let w = null, pads = [], padCooldown = 0, group = null;
   const padTexture = () => {
-    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
-    g.fillStyle = '#ffd6e6'; g.beginPath(); g.arc(128, 128, 126, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#ffffff'; g.lineWidth = 14; g.beginPath(); g.arc(128, 128, 96, 0, Math.PI * 2); g.stroke();
-    g.fillStyle = '#ff6fa3'; g.beginPath(); g.moveTo(128, 46); g.lineTo(186, 116); g.lineTo(150, 116); g.lineTo(150, 196); g.lineTo(106, 196); g.lineTo(106, 116); g.lineTo(70, 116); g.closePath(); g.fill();
+    const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+    g.fillStyle = '#fff3d6'; g.beginPath(); g.arc(256, 256, 250, 0, Math.PI * 2); g.fill();
+    g.save(); g.translate(256, 256); g.fillStyle = '#ff8fb8';
+    for (let i = 0; i < 8; i++) { g.rotate(Math.PI / 4); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 250, -Math.PI / 16, Math.PI / 16); g.closePath(); g.fill(); }
+    g.restore();
+    g.lineWidth = 22; g.strokeStyle = '#ffffff'; g.beginPath(); g.arc(256, 256, 236, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(256, 256, 150, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ff5f9e'; g.beginPath(); g.moveTo(256, 116); g.lineTo(356, 236); g.lineTo(300, 236); g.lineTo(300, 380); g.lineTo(212, 380); g.lineTo(212, 236); g.lineTo(156, 236); g.closePath(); g.fill();
+    g.lineWidth = 12; g.strokeStyle = '#ffffff'; g.stroke();
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
   };
-  const centerOf = name => { const o = scene()?.getObjectByName?.(name); if (!o) return null; const b = new THREE.Box3().setFromObject(o); if (b.isEmpty()) return null; const c = b.getCenter(new THREE.Vector3()); return {x: c.x, z: c.z}; };
-  const validSpot = (x, z) => { const g = groundAt(x, z); if (g === null || isWater(x, z)) return false; const t = terrainAt(x, z); if (t !== null && Math.abs(g - t) > 0.5) return false; for (const [dx, dz] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3]]) { const gg = groundAt(x + dx, z + dz); if (gg === null || Math.abs(gg - g) > 0.35) return false; } return true; };
+  const starTexture = () => {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+    g.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 12 : 28; g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } g.closePath();
+    g.fillStyle = '#ffd54a'; g.fill(); g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  };
+  let starTex = null; const bursts = [];
+  const burst = (x, y, z) => {
+    if (!starTex) starTex = starTexture();
+    for (let i = 0; i < 9; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map: starTex, transparent: true, depthWrite: false}));
+      const a = i / 9 * Math.PI * 2, r = 0.45 + Math.random() * 0.3; sp.scale.setScalar(0.32 + Math.random() * 0.2);
+      sp.position.set(x + Math.cos(a) * 0.4, y + 0.3, z + Math.sin(a) * 0.4); sp.name = 'PARTY_star'; group.add(sp);
+      bursts.push({sp, vx: Math.cos(a) * 2.2 * r, vy: 5 + Math.random() * 2.5, vz: Math.sin(a) * 2.2 * r, t: 0});
+    }
+  };
+  const stepBursts = dt => {
+    for (let i = bursts.length - 1; i >= 0; i--) { const b = bursts[i]; b.t += dt; b.vy -= 14 * dt; b.sp.position.x += b.vx * dt; b.sp.position.y += b.vy * dt; b.sp.position.z += b.vz * dt; b.sp.material.rotation += 4 * dt; b.sp.material.opacity = Math.max(0, 1 - b.t / 0.8); if (b.t > 0.8) { b.sp.removeFromParent(); b.sp.material.dispose(); bursts.splice(i, 1); } }
+  };
+  const makePad = (x, y, z, tex) => {
+    const pad = new THREE.Group(); pad.name = 'PARTY_pad'; pad.position.set(x, y, z);
+    const pink = new THREE.MeshStandardMaterial({color: '#ff7fb0', roughness: 0.55, metalness: 0});
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.38, 0.2, 48), pink); base.position.y = 0.1; base.castShadow = true; base.receiveShadow = true;
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.07, 12, 48), new THREE.MeshStandardMaterial({color: '#ffffff', roughness: 0.5})); lip.rotation.x = Math.PI / 2; lip.position.y = 0.2;
+    const springs = new THREE.Group(); const coil = new THREE.MeshStandardMaterial({color: '#e9eef5', roughness: 0.35, metalness: 0.25});
+    for (let i = 0; i < 3; i++) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.06, 10, 40), coil); ring.rotation.x = Math.PI / 2; ring.position.y = 0.06 + i * 0.09; springs.add(ring); }
+    springs.position.y = 0.2;
+    const top = new THREE.Group(); top.position.y = 0.44;
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 0.98, 0.16, 48), [new THREE.MeshStandardMaterial({color: '#ff9fc4', roughness: 0.5}), new THREE.MeshStandardMaterial({map: tex, roughness: 0.45}), new THREE.MeshStandardMaterial({color: '#ff9fc4'})]);
+    disc.castShadow = true; disc.receiveShadow = true;
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.06, 0.06, 12, 48), new THREE.MeshStandardMaterial({color: '#ffffff', roughness: 0.5})); rim.rotation.x = Math.PI / 2; rim.position.y = 0.08;
+    top.add(disc, rim);
+    const glow = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.75, 48), new THREE.MeshBasicMaterial({color: '#ffb3d1', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide})); glow.rotation.x = -Math.PI / 2; glow.position.y = 0.03;
+    pad.add(base, lip, springs, top, glow);
+    return {group: pad, top, springs, glow, x, y, z, squash: 0, vel: 0, phase: Math.random() * 6};
+  };
   const build = () => {
     const s = scene(); if (!s) return;
     group = new THREE.Group(); group.name = 'PARTY_items'; s.add(group);
@@ -373,13 +412,7 @@ const items = (() => {
       for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2], [3, 3], [-3, -3], [4, 0], [0, 4]]) if (validSpot(c.x + dx, c.z + dz)) { spot = {x: c.x + dx, z: c.z + dz}; break; }
       if (!spot || pads.some(p => Math.hypot(p.x - spot.x, p.z - spot.z) < 6)) continue;
       const y = groundAt(spot.x, spot.z);
-      const pad = new THREE.Group(); pad.name = 'PARTY_pad'; pad.position.set(spot.x, y, spot.z);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.25, 0.16, 40), new THREE.MeshStandardMaterial({color: '#ff9fc4', roughness: 0.6, metalness: 0}));
-      base.position.y = 0.08; base.castShadow = true; base.receiveShadow = true;
-      const top = new THREE.Mesh(new THREE.CircleGeometry(1.05, 40), new THREE.MeshStandardMaterial({map: tex, roughness: 0.5}));
-      top.rotation.x = -Math.PI / 2; top.position.y = 0.165;
-      pad.add(base, top); group.add(pad);
-      pads.push({group: pad, x: spot.x, y, z: spot.z, squash: 0, phase: Math.random() * 6});
+      const pad = makePad(spot.x, y, spot.z, tex); group.add(pad.group); pads.push(pad);
     }
     log('pads', pads.length);
   };
@@ -388,17 +421,20 @@ const items = (() => {
     const t = body?.translation?.(); const lv = body?.linvel?.();
     const now = performance.now() / 1000;
     for (const pad of pads) {
-      pad.squash = Math.max(0, pad.squash - dt * 3.2);
-      pad.group.position.y = pad.y + Math.sin(now * 2 + pad.phase) * 0.02;
-      pad.group.scale.y = 1 - pad.squash * 0.55; pad.group.scale.x = pad.group.scale.z = 1 + pad.squash * 0.25;
+      // squash is a damped spring around 0: negative = pressed down, positive = popped up
+      const acc = -160 * pad.squash - 11 * pad.vel; pad.vel += acc * dt; pad.squash += pad.vel * dt;
+      const bob = Math.sin(now * 2 + pad.phase) * 0.012;
+      pad.top.position.y = 0.44 + bob + pad.squash * 0.35; pad.top.scale.y = clamp(1 + pad.squash * 0.9, 0.35, 1.5); pad.top.scale.x = pad.top.scale.z = clamp(1 - pad.squash * 0.35, 0.8, 1.2);
+      pad.springs.scale.y = clamp(1 + pad.squash * 0.8, 0.3, 1.4);
+      pad.glow.material.opacity = 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(now * 3 + pad.phase)); pad.glow.rotation.z = now * 0.4;
       if (!t || !lv || padCooldown > 0) continue;
       const d = Math.hypot(t.x - pad.x, t.z - pad.z), dy = t.y - pad.y;
       if (d < 1.2 && dy > -0.3 && dy < 1.3 && lv.y <= 0.8) {
         const st = state(); if (!st?.enabled) continue;
         try { body.setLinvel({x: lv.x, y: 12.5, z: lv.z}, true); } catch { continue; }
         st.grounded = false; st.hover = false; st.airT = 0; st.jumpsLeft = 1; st.stretch = 1; st.fallPeak = 0; st.verticalVelocity = 12.5;
-        pad.squash = 1; padCooldown = 0.55; kick(0.28); sfx.play('pad'); buzz([15, 30, 25]);
-        fxRing([pad.x, pad.y + 0.1, pad.z], '#ffffff');
+        pad.squash = -0.75; pad.vel = -6; padCooldown = 0.55; kick(0.28); sfx.play('pad'); buzz([15, 30, 25]);
+        fxRing([pad.x, pad.y + 0.1, pad.z], '#ffffff'); burst(pad.x, pad.y + 0.4, pad.z);
       }
     }
   };
@@ -409,6 +445,7 @@ const items = (() => {
       if (!group) return;
       for (const pad of pads) pad.group.visible = !!settings.pads;
       if (settings.pads) stepPads(body, dt);
+      stepBursts(dt);
       stepRings(dt);
     },
     count() { return {pads: pads.length}; },
@@ -424,13 +461,31 @@ function installControls() {
     if (ev.target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]')) return;
     if (throwNow()) { ev.preventDefault(); ev.stopImmediatePropagation(); }
   }, {capture: true});
-  if (!isTouch) return;
-  const btn = document.createElement('button');
-  btn.id = 'party-throw'; btn.type = 'button'; btn.className = 'party-btn'; btn.setAttribute('aria-label', 'Throw');
-  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14c3-6 8-8 14-8"/><path d="M14 4l4 2-2 4"/><circle cx="6" cy="17" r="2.2"/><path d="M10 20l2-4"/></svg><span>Throw</span>';
-  btn.addEventListener('pointerdown', ev => { ev.preventDefault(); ev.stopPropagation(); throwNow(); });
-  btn.hidden = true; document.body.append(btn);
-  setInterval(() => { try { btn.hidden = !(heldId() && player.map === 'city'); } catch {} }, 200);
+  if (isTouch) {
+    const btn = document.createElement('button');
+    btn.id = 'party-throw'; btn.type = 'button'; btn.className = 'party-eggy party-eggy-blue'; btn.setAttribute('aria-label', 'Throw');
+    btn.innerHTML = ICONS.throw + '<span>Throw</span>';
+    btn.addEventListener('pointerdown', ev => { ev.preventDefault(); ev.stopPropagation(); throwNow(); });
+    btn.hidden = true; document.body.append(btn);
+    setInterval(() => { try { btn.hidden = !(heldId() && player.map === 'city'); } catch {} }, 200);
+  }
+  installEggyButtons();
+}
+// Cartoon icons (white fills with dark outlines) in the Eggy Party spirit. No emoji.
+const ICONS = {
+  punch: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M17 27c0-4 3-7 7-7h2c1-4 4-7 8-7s7 3 8 7h3c4 0 7 3 7 7v11c0 8-6 14-14 14H27c-6 0-10-4-10-10z" fill="#fff" stroke="#6b2a4a" stroke-width="3.2" stroke-linejoin="round"/><path d="M26 20v10M34 13v17M42 20v10" fill="none" stroke="#6b2a4a" stroke-width="3" stroke-linecap="round"/><path d="M12 33c0-3 2-5 5-5v18c-3 0-5-2-5-5z" fill="#ffd54a" stroke="#6b2a4a" stroke-width="3" stroke-linejoin="round"/><path d="M8 46h5" stroke="#6b2a4a" stroke-width="3" stroke-linecap="round"/><path d="M50 10l3-4M55 16l5-2M53 7l6-3" stroke="#6b2a4a" stroke-width="3" stroke-linecap="round"/></svg>',
+  throw: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="20" cy="42" r="9" fill="#fff" stroke="#2f4a63" stroke-width="3.2"/><circle cx="17" cy="41" r="1.6" fill="#2f4a63"/><circle cx="23" cy="41" r="1.6" fill="#2f4a63"/><path d="M17 45c2 1.5 4 1.5 6 0" fill="none" stroke="#2f4a63" stroke-width="2.4" stroke-linecap="round"/><path d="M27 26c6-10 16-13 26-8" fill="none" stroke="#2f4a63" stroke-width="4" stroke-linecap="round"/><path d="M46 12l8 6-8 6" fill="#fff" stroke="#2f4a63" stroke-width="3.2" stroke-linejoin="round"/><path d="M8 26l5 2M9 33l5-1" stroke="#2f4a63" stroke-width="3" stroke-linecap="round"/></svg>',
+};
+function installEggyButtons() {
+  // The game's own Punch button is an element with inline styles; restyle it in place (its click handlers stay).
+  let done = null;
+  const dress = () => {
+    const b = document.getElementById('preview-hit'); if (!b || b === done) return; done = b;
+    b.style.cssText = 'position:fixed;right:20px;bottom:calc(280px + env(safe-area-inset-bottom));z-index:50;touch-action:manipulation;';
+    b.classList.add('party-eggy', 'party-eggy-pink'); b.innerHTML = ICONS.punch + '<span>Punch</span>' + (isTouch ? '' : '<i class="party-key">F</i>');
+  };
+  const tick = () => { try { dress(); } catch {} };
+  tick(); setInterval(tick, 700);
 }
 
 // ---------- settings panel ----------
