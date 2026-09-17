@@ -1,7 +1,6 @@
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const ASSETS='https://oscarbrendonn.github.io/67park-kimi-party/models/';
 const STORAGE='67park.style-studio.v1';
@@ -47,22 +46,19 @@ function buildItem(item){const donor=donors.get(item.donor),src=meshWith(donor.s
 }
 function choose(category,id){if(!ready)return;const c=categories.find(c=>c.id===category),item=c.items.find(i=>i.id===id);if(!item)return;equipment.get(category)&&(equipment.get(category).visible=false);const mesh=prepared.get(category+':'+id);if(mesh)mesh.visible=true;equipment.set(category,mesh);selection[category]=id;if(category==='top')rig.getObjectByName('FS_Body').visible=id==='original';updateLabels();}
 async function init(){
- scene=new T.Scene();camera=new T.PerspectiveCamera(33,1,.01,80);renderer=new T.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;viewport.append(renderer.domElement);
- const pmrem=new T.PMREMGenerator(renderer),room=new RoomEnvironment(),env=pmrem.fromScene(room,.04);scene.environment=env.texture;room.dispose();pmrem.dispose();scene.add(new T.HemisphereLight(0xfffaf0,0xc1b5cb,1.7));
- const key=new T.DirectionalLight(0xfff5e4,3);key.position.set(3,5,4);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-2;key.shadow.camera.right=2;key.shadow.camera.top=3;key.shadow.camera.bottom=-2;key.shadow.bias=-.0003;key.shadow.normalBias=.015;scene.add(key);const fill=new T.DirectionalLight(0xddeeff,2);fill.position.set(-3,2,2);scene.add(fill);const rim=new T.DirectionalLight(0xffffff,2);rim.position.set(1,3,-3);scene.add(rim);
- const base=new T.Mesh(new T.CylinderGeometry(.85,.9,.1,80),new T.MeshStandardMaterial({color:'#e5e0d1',roughness:.7}));base.position.y=-.065;base.receiveShadow=true;scene.add(base);const floor=new T.Mesh(new T.PlaneGeometry(200,200),new T.ShadowMaterial({opacity:.15}));floor.rotation.x=-Math.PI/2;floor.position.y=-.12;floor.receiveShadow=true;scene.add(floor);
+ // Match the approved empty fit-lab: warm blank backdrop, plain floor and
+ // direct soft studio lighting. No podium, reflective room or colour wash.
+ scene=new T.Scene();scene.background=new T.Color('#ead4d4');camera=new T.PerspectiveCamera(35,1,.01,100);renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.NoToneMapping;viewport.append(renderer.domElement);
+ scene.add(new T.HemisphereLight(0xffffff,0x9c8390,2.5));const key=new T.DirectionalLight(0xffffff,3);key.position.set(3,5,4);scene.add(key);
+ const floor=new T.Mesh(new T.PlaneGeometry(30,30),new T.MeshStandardMaterial({color:'#e4caca',roughness:.8}));floor.name='Studio_plain_floor';floor.rotation.x=-Math.PI/2;floor.position.y=-.01;scene.add(floor);
  const loader=new GLTFLoader();const load=async name=>{const g=await loader.loadAsync(ASSETS+name);g.scene.updateMatrixWorld(true);return g};const ids=[2,3333,1,8,26];const loaded=await Promise.all([load('goril-motion-v3.glb'),...ids.map(id=>load('friends/friendsie_'+id+'.glb'))]);const original=loaded[0];ids.forEach((id,i)=>donors.set(id,loaded[i+1]));rig=clone(original.scene);scene.add(rig);rig.traverse(o=>{if(/^(TAC|CICEK)$/.test(o.name))o.visible=false;if(o.isMesh){o.castShadow=true;o.frustumCulled=false}});rig.updateMatrixWorld(true);
  for(const c of categories)for(const item of c.items)if(item.donor)prepared.set(c.id+':'+item.id,buildItem(item));
  const bounds=new T.Box3().setFromObject(rig.getObjectByName('GORIL_KAFA'),true),bodyBox=new T.Box3().setFromObject(rig.getObjectByName('FS_Body'),true);bounds.union(bodyBox);const scale=1.5/(bounds.max.y-bounds.min.y);rig.scale.setScalar(scale);rig.position.y=-bounds.min.y*scale;rig.rotation.y=angle;rig.updateMatrixWorld(true);
  mixer=new T.AnimationMixer(rig);const idle=original.animations.find(c=>c.name==='idle'),walk=original.animations.find(c=>c.name==='walk');function play(){mixer.stopAllAction();const clip=walking?walk:idle;if(clip)mixer.clipAction(clip).reset().play()}play();
- const resize=()=>{const {width,height}=viewport.getBoundingClientRect();renderer.setSize(width,height);camera.aspect=width/height;camera.position.set(0,1.4,Math.max(4.1,2.75/camera.aspect));camera.lookAt(0,.79,0);camera.updateProjectionMatrix()};new ResizeObserver(resize).observe(viewport);resize();
+ const resize=()=>{const {width,height}=viewport.getBoundingClientRect();renderer.setSize(width,height);camera.aspect=width/height;camera.position.set(0,1.5,Math.max(6.7,2.75/camera.aspect));camera.lookAt(0,.75,0);camera.updateProjectionMatrix()};new ResizeObserver(resize).observe(viewport);resize();
  let pointer=null,lastX;renderer.domElement.addEventListener('pointerdown',e=>{if(pointer!==null||e.button!==0)return;pointer=e.pointerId;lastX=e.clientX;renderer.domElement.setPointerCapture(pointer)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;angle+=(e.clientX-lastX)*.009;lastX=e.clientX});const stop=()=>pointer=null;renderer.domElement.addEventListener('pointerup',stop);renderer.domElement.addEventListener('pointercancel',stop);renderer.domElement.addEventListener('lostpointercapture',stop);
  document.querySelector('#front').onclick=()=>angle=0;document.querySelector('#back').onclick=()=>angle=Math.PI;document.querySelector('#pose').onclick=()=>{walking=!walking;document.querySelector('#pose').setAttribute('aria-pressed',String(walking));play()};
  document.querySelector('#save').onclick=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(selection));announce('Look saved on this browser.')}catch{announce('Storage unavailable. Your preview is still here.')}};document.querySelector('#reset').onclick=()=>{for(const [k,v]of Object.entries(starter))choose(k,v);announce('Starter look restored. Save to keep it.')};
- // Keep the original colours rich; the environment is a subtle softbox, not
- // a white wash over the character. Material changes are studio-only clones.
- scene.traverse(o=>{if(o.isMesh&&o.material){const soften=m=>{const copy=m.clone();copy.envMapIntensity=.22;return copy};o.material=Array.isArray(o.material)?o.material.map(soften):soften(o.material)}});
- key.intensity=1.65;fill.intensity=.8;rim.intensity=1;renderer.toneMappingExposure=.95;
  ready=true;for(const [k,v]of Object.entries(selection))choose(k,v);document.querySelectorAll('#slots button,#save,#reset').forEach(b=>b.disabled=false);status.hidden=true;const clock=new T.Clock();renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(document.hidden)return;mixer.update(dt);rig.rotation.y=angle;renderer.render(scene,camera);frames++});
  window.studio={get ready(){return ready},get frames(){return frames},get selection(){return {...selection}},rig,scene,renderer,camera,categories,prepared,choose,get walking(){return walking}};
 }
