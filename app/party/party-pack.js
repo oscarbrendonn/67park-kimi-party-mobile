@@ -38,7 +38,7 @@ const sfx = (() => {
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return ctx;
   };
-  for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, () => ensure(), {passive: true, capture: true});
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown']) window.addEventListener(ev, () => ensure(), {passive: true, capture: true});
   const can = () => ctx && ctx.state === 'running' && !gameMuted() && settings.sfx > 0.001;
   const env = (node, t, peak, a, h, r) => { const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.setValueAtTime(Math.max(0.0002, peak), t + a + h); g.gain.exponentialRampToValueAtTime(0.0001, t + a + h + r); node.connect(g); g.connect(master); return g; };
   const tone = (type, f0, f1, dur, peak, a = 0.005, r = 0.08, detune = 0) => { const t = ctx.currentTime; const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); o.detune.value = detune; env(o, t, peak, a, Math.max(0, dur - a), r); o.start(t); o.stop(t + dur + r + 0.02); };
@@ -53,10 +53,12 @@ const sfx = (() => {
     grab: () => { tone('sine', 520, 260, 0.09, 0.2, 0.003, 0.05); burst('highpass', 2500, 0.8, 0.03, 0.08); },
     throw: () => { burst('bandpass', 700, 0.8, 0.16, 0.2, 0.01, 0.08); tone('triangle', 400, 900, 0.14, 0.09, 0.01, 0.08); },
     click: () => { tone('sine', 900, 700, 0.03, 0.12, 0.002, 0.03); },
+    step: (left) => { burst('lowpass', left ? 520 : 460, 0.9, 0.045, 0.16, 0.002, 0.05); tone('sine', left ? 150 : 135, 70, 0.05, 0.07, 0.002, 0.04); },
     stars: () => { for (let i = 0; i < 3; i++) setTimeout(() => can() && tone('sine', 1200 + i * 220, 1500 + i * 200, 0.08, 0.06, 0.005, 0.1), i * 90); },
   };
   return {
     ensure,
+    state() { return ctx ? ctx.state : 'none'; },
     play(name, arg) { if (!can() || !recipes[name]) return; try { recipes[name](arg); } catch {} },
     setVolume(v) { settings.sfx = clamp(v, 0, 1); if (master && ctx) master.gain.setTargetAtTime(settings.sfx, ctx.currentTime, 0.03); saveSettings(); },
   };
@@ -94,6 +96,7 @@ window.__partyStep = guard((body, input, dt, map) => {
   dt = clamp(finite(dt) ? dt : 0, 0, 0.05);
   netHook.step();
   knockStep(dt);
+  footsteps(state(), dt);
   if (map !== 'city' || !world()) return;
   items.step(body, dt);
   remotePops.step(dt);
@@ -200,6 +203,16 @@ const remotePops = (() => {
     step(dt) { for (const [id, p] of pops) { p.t += dt; const k = p.t / 0.35; if (k >= 1 || !p.g.parent) { p.g.scale.set(p.sx, p.sy, p.sz); pops.delete(id); continue; } const w = Math.sin(k * Math.PI); p.g.scale.set(p.sx * (1 + 0.28 * w), p.sy * (1 - 0.22 * w), p.sz * (1 + 0.28 * w)); } },
   };
 })();
+// Footsteps: the park has no walking sounds for this character, so play soft pats by speed.
+let stepPhase = 0, stepLeft = false;
+function footsteps(st, dt) {
+  if (!st?.enabled || !st.grounded || !settings.juice) { stepPhase = 0; return; }
+  const sp = finite(st.speed) ? Math.abs(st.speed) : 0;
+  if (sp < 1.2) { stepPhase = 0; return; }
+  const cadence = sp > 7 ? 4.6 : sp > 4 ? 3.6 : 2.6; // steps per second
+  stepPhase += cadence * dt;
+  if (stepPhase >= 1) { stepPhase -= 1; stepLeft = !stepLeft; sfx.play('step', stepLeft); }
+}
 let knockState = null;
 function knockStep(dt) {
   const k = knockState; if (!k) return; const st = state(); if (!st?.enabled) { knockState = null; return; }
@@ -569,6 +582,6 @@ function installSettings() {
 
 try { installSettings(); installControls(); log('ready', VERSION, 'base', BASE, 'touch', isTouch); }
 catch (e) { disabled = true; log('install failed', e); }
-window.__party = {version: VERSION, settings, sfx, hits, netHook, botFlights, botsInFront,
+window.__party = {version: VERSION, settings, sfx, hits, netHook, botFlights, botsInFront, audio: () => sfx.state(),
   status: () => ({disabled, runtime: !!stateApi, carry: !!carryApi, spring: spring.v, map: player.map, ...items.count()}),
   debug: () => { const t = player.body?.translation?.(); const st = state(); return {...items.debug(), player: t ? {x: t.x, y: t.y, z: t.z} : null, state: st ? {grounded: st.grounded, speed: st.speed, vy: st.verticalVelocity, punchT: st.punchT, shake: st.shake, enabled: st.enabled} : null, id: net()?.id || null, remotes: net()?.remotes?.size ?? null}; }};
