@@ -4,6 +4,7 @@
 // Every hook is guarded: a fault here disables the pack and never stops the game.
 // Loaded after app/main.js. Config: window.__partyConfig = {runtime: "<runtime ?v>", carry: "<carry ?v>"}.
 import * as THREE from 'three';
+import { createPartyAudio } from './party-audio.js?v=audio-2';
 
 const BASE = new URL('../../', import.meta.url).pathname.replace(/\/$/, '');
 const CFG = Object.assign({runtime: '', carry: ''}, (typeof window !== 'undefined' && window.__partyConfig) || {});
@@ -29,40 +30,7 @@ function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringif
 const gameMuted = () => { try { return localStorage.getItem('67park-muted') === '1'; } catch { return false; } };
 
 // ---------- sound (synthesized, no files) ----------
-const sfx = (() => {
-  let ctx = null, master = null, noise = null;
-  const ensure = () => {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); return ctx; }
-    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
-    ctx = new AC(); master = ctx.createGain(); master.gain.value = settings.sfx; master.connect(ctx.destination);
-    noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    return ctx;
-  };
-  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown']) window.addEventListener(ev, () => ensure(), {passive: true, capture: true});
-  const can = () => ctx && ctx.state === 'running' && !gameMuted() && settings.sfx > 0.001;
-  const env = (node, t, peak, a, h, r) => { const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.setValueAtTime(Math.max(0.0002, peak), t + a + h); g.gain.exponentialRampToValueAtTime(0.0001, t + a + h + r); node.connect(g); g.connect(master); return g; };
-  const tone = (type, f0, f1, dur, peak, a = 0.005, r = 0.08, detune = 0) => { const t = ctx.currentTime; const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); o.detune.value = detune; env(o, t, peak, a, Math.max(0, dur - a), r); o.start(t); o.stop(t + dur + r + 0.02); };
-  const burst = (type, freq, q, dur, peak, a = 0.002, r = 0.06) => { const t = ctx.currentTime; const s = ctx.createBufferSource(); s.buffer = noise; s.playbackRate.value = 0.8 + Math.random() * 0.4; const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; s.connect(f); env(f, t, peak, a, Math.max(0, dur - a), r); s.start(t); s.stop(t + dur + r + 0.02); };
-  const recipes = {
-    jump: () => { tone('sine', 320, 720, 0.13, 0.22, 0.006, 0.09); tone('triangle', 160, 420, 0.1, 0.08, 0.004, 0.06); },
-    double: () => { tone('sine', 480, 980, 0.14, 0.2, 0.005, 0.1); tone('sine', 720, 1400, 0.12, 0.1, 0.02, 0.1, 8); },
-    land: hard => { burst('lowpass', hard ? 420 : 320, 0.8, hard ? 0.09 : 0.06, hard ? 0.35 : 0.18); tone('sine', hard ? 110 : 90, 45, 0.09, hard ? 0.28 : 0.14, 0.003, 0.08); },
-    pad: () => { tone('sine', 190, 95, 0.09, 0.22, 0.004, 0.04); setTimeout(() => can() && (tone('triangle', 240, 1250, 0.24, 0.26, 0.006, 0.18), tone('sine', 480, 1900, 0.22, 0.1, 0.03, 0.16), burst('bandpass', 2200, 1.2, 0.05, 0.07)), 70); },
-    swing: () => { burst('bandpass', 900, 0.9, 0.11, 0.16, 0.01, 0.05); },
-    hit: () => { burst('lowpass', 500, 0.7, 0.07, 0.4); tone('square', 180, 70, 0.08, 0.22, 0.002, 0.06); tone('sine', 900, 300, 0.05, 0.1, 0.001, 0.03); },
-    grab: () => { tone('sine', 520, 260, 0.09, 0.2, 0.003, 0.05); burst('highpass', 2500, 0.8, 0.03, 0.08); },
-    throw: () => { burst('bandpass', 700, 0.8, 0.16, 0.2, 0.01, 0.08); tone('triangle', 400, 900, 0.14, 0.09, 0.01, 0.08); },
-    click: () => { tone('sine', 900, 700, 0.03, 0.12, 0.002, 0.03); },
-    step: (left) => { burst('lowpass', left ? 520 : 460, 0.9, 0.045, 0.16, 0.002, 0.05); tone('sine', left ? 150 : 135, 70, 0.05, 0.07, 0.002, 0.04); },
-    stars: () => { for (let i = 0; i < 3; i++) setTimeout(() => can() && tone('sine', 1200 + i * 220, 1500 + i * 200, 0.08, 0.06, 0.005, 0.1), i * 90); },
-  };
-  return {
-    ensure,
-    state() { return ctx ? ctx.state : 'none'; },
-    play(name, arg) { if (!can() || !recipes[name]) return; try { recipes[name](arg); } catch {} },
-    setVolume(v) { settings.sfx = clamp(v, 0, 1); if (master && ctx) master.gain.setTargetAtTime(settings.sfx, ctx.currentTime, 0.03); saveSettings(); },
-  };
-})();
+const sfx = createPartyAudio({settings, saveSettings, gameMuted});
 const buzz = pattern => { if (!settings.haptics || !isTouch) return; try { navigator.vibrate?.(pattern); } catch {} };
 
 // ---------- world access ----------
@@ -89,6 +57,7 @@ const spring = {v: 0, vel: 0, k: 190, c: 15};
 function kick(amount) { spring.v += amount; }
 function stepSpring(dt) { const a = -spring.k * spring.v - spring.c * spring.vel; spring.vel += a * dt; spring.v += spring.vel * dt; spring.v = clamp(spring.v, -0.42, 0.45); }
 let prevPunchT = 0, wasEnabled = false, hitTumble = 0, tumbleDir = 0;
+let previousHeld = '';
 
 // ---------- hooks called by main.js ----------
 window.__partyStep = guard((body, input, dt, map) => {
@@ -97,6 +66,9 @@ window.__partyStep = guard((body, input, dt, map) => {
   netHook.step();
   knockStep(dt);
   footsteps(state(), dt);
+  const held = heldId();
+  if (held && !previousHeld) sfx.play('grab');
+  previousHeld = held;
   if (map !== 'city' || !world()) return;
   items.step(body, dt);
   remotePops.step(dt);
@@ -107,17 +79,25 @@ window.__partyVisual = guard((group, dt) => {
   dt = clamp(finite(dt) ? dt : 0, 0, 0.05);
   const st = state();
   if (!group) return;
+  const punchStarted = st?.punchT > 0 && prevPunchT === 0;
+  // Sound follows actions even when visual bounce or reduced-motion effects are off.
+  if (st?.enabled && player.map === 'city') {
+    if (st.jumped === 1) sfx.play('jump');
+    else if (st.jumped === 2) sfx.play('double');
+    if (st.landed) sfx.play('land', st.landed > 9);
+    if (punchStarted) sfx.play('swing');
+  }
+  prevPunchT = st?.punchT || 0;
   if (!st || !st.enabled || player.map !== 'city' || !settings.juice || reducedMotion()) {
     if (wasEnabled) { group.scale.x = group.scale.z = 1; wasEnabled = false; }
     return;
   }
   wasEnabled = true;
-  if (st.jumped === 1) { kick(0.16); sfx.play('jump'); buzz(8); }
-  else if (st.jumped === 2) { kick(0.22); sfx.play('double'); buzz([8, 30, 8]); }
-  if (st.landed) { const hard = st.landed > 9; kick(-0.30 * clamp(st.landed / 10, 0.5, 1)); sfx.play('land', hard); buzz(hard ? 22 : 10); }
-  if (st.punchT > 0 && prevPunchT === 0) { kick(0.07); sfx.play('swing'); }
+  if (st.jumped === 1) { kick(0.16); buzz(8); }
+  else if (st.jumped === 2) { kick(0.22); buzz([8, 30, 8]); }
+  if (st.landed) { const hard = st.landed > 9; kick(-0.30 * clamp(st.landed / 10, 0.5, 1)); buzz(hard ? 22 : 10); }
+  if (punchStarted) kick(0.07);
   if (st.punchImpact) { st.shake = Math.max(st.shake || 0, 0.22); hits.punch(); }
-  prevPunchT = st.punchT || 0;
   stepSpring(dt);
   const vy = finite(st.verticalVelocity) ? st.verticalVelocity : 0;
   const air = st.grounded ? 0 : clamp(Math.abs(vy) / 11, 0, 1) * 0.11;
@@ -206,7 +186,7 @@ const remotePops = (() => {
 // Footsteps: the park has no walking sounds for this character, so play soft pats by speed.
 let stepPhase = 0, stepLeft = false;
 function footsteps(st, dt) {
-  if (!st?.enabled || !st.grounded || !settings.juice) { stepPhase = 0; return; }
+  if (!st?.enabled || !st.grounded) { stepPhase = 0; return; }
   const sp = finite(st.speed) ? Math.abs(st.speed) : 0;
   if (sp < 1.2) { stepPhase = 0; return; }
   const cadence = sp > 7 ? 4.6 : sp > 4 ? 3.6 : 2.6; // steps per second
