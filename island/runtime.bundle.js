@@ -4,7 +4,7 @@ import {installParkedFleet as __fleetParked38} from "../app/parked-fleet.js?v=re
 import {applyKimiCoast20} from '/67park-kimi-party-mobile/app/kimi-coast20.js?v=coast-24';
 import {cleanLowerPark} from '/67park-kimi-party-mobile/app/park-lower-cleanup.js?v=20260914p';
 import {repairEastRoadEnd} from '/67park-kimi-party-mobile/app/east-road-end.js?v=20260914-east1';
-import {installIslandDriving as __parkInstallDriving} from '/67park-kimi-party-mobile/app/island-drive-area.js?v=vehicle-48';
+import {installIslandDriving as __parkInstallDriving} from '/67park-kimi-party-mobile/app/island-drive-area.js?v=drive-anywhere-1';
 import {installLobbyCourts as __parkInstallCourts} from '/67park-kimi-party-mobile/app/lobby-courts.js';
 import {shortenKimiRightTip} from '/67park-kimi-party-mobile/app/kimi-right-curb-tip.js?v=coast-20a';
 import{pdFetchLite as __pdL,pdPrereqs as __pdP,pdRebuild as __pdR}from"/67park-kimi-party-mobile/island/patch-dedupe-v1.js?v=release-40";
