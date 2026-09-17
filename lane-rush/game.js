@@ -3,6 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {i as createCharacter,f as equipment} from '../balloon/chunk-U4P5F7P3.js';
 import {bindMinigameLook,bindHeldAction} from '../app/minigame-input.js';
 import {CHARACTER_CONTROL as profile,characterDirection,characterCameraPose} from '../app/character-control-profile.js';
+import {poseCarryHands} from '../app/carry-hand-pose.js?v=carry-hands-1';
 
 const $=s=>document.querySelector(s),canvas=$('#game'),placeEl=$('#place'),timerEl=$('#timer'),hint=$('#hint'),countdown=$('#countdown'),restart=$('#restart');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
@@ -61,7 +62,7 @@ async function loadCharacters(){
 }
 function release(r,throwing=false){
  const target=r.carry;if(!target)return;
- r.carry=null;target.carriedBy=null;target.y=r.y+1.6;target.vy=throwing?5:0;
+ r.carry=null;target.carriedBy=null;target.y=Math.max(0,target.root.position.y-.15);target.vy=throwing?5:0;
  target.vx=throwing?Math.sin(r.root.rotation.y)*10:0;target.vz=throwing?Math.cos(r.root.rotation.y)*10:0;
  target.stun=throwing?.55:0;target.immune=1.1;target.grounded=false;target.pivot.rotation.set(0,0,0);
 }
@@ -71,7 +72,7 @@ function grab(){
  if(player.carry){release(player,true);return}
  let target=null,best=2.1;
  for(const r of racers){if(r===player||r.carriedBy||r.carry||r.finished)continue;const distance=player.root.position.distanceTo(r.root.position);if(distance<best){target=r;best=distance}}
- if(target){player.carry=target;target.carriedBy=player;player.carryAge=0;target.stun=0;target.vx=target.vz=target.vy=0;}
+ if(target){player.carry=target;target.carriedBy=player;player.carryAge=0;target.pickupFrom=target.root.position.clone();target.stun=0;target.vx=target.vz=target.vy=0;}
 }
 function hit(r,x,z){if(r.immune>0||r.carriedBy||r.finished)return;release(r);r.stun=.58;r.immune=1.05;r.vx=x*5;r.vz=z*5;r.vy=3.8;r.grounded=false;}
 function collisions(r){
@@ -141,7 +142,17 @@ function frame(){
   for(const o of obstacles){if(o.kind==='slider')o.mesh.position.x=Math.sin(worldTime*o.speed+o.phase+o.row)*6.9;else o.mesh.rotation.y=worldTime*o.speed;}
   if(actionPending){actionPending=false;grab();}
   for(const r of racers)move(r,dt);
-  for(const r of racers)if(r.carriedBy){const carrier=r.carriedBy;r.root.position.copy(carrier.root.position);r.root.position.y+=1.8;r.root.rotation.y=carrier.root.rotation.y;r.pivot.rotation.x=0;r.pivot.rotation.z=reduced?0:.15;r.avatar.animator.update(dt,{speed:0,grounded:false});}
+  for(const r of racers)if(r.carriedBy){
+   const carrier=r.carriedBy,heading=carrier.root.rotation.y;
+   // Mini-game roots are at the feet; the island root is 0.555 m higher.
+   // Keep the same hand-supported height without the old 1.8 m teleport.
+   const t=reduced?1:Math.min(1,carrier.carryAge/.2),blend=t*t*(3-2*t);
+   position.set(carrier.root.position.x+Math.sin(heading)*.36,carrier.root.position.y+.595,carrier.root.position.z+Math.cos(heading)*.36);
+   r.root.position.copy(r.pickupFrom).lerp(position,blend);
+   r.y=Math.max(0,r.root.position.y-.15);r.root.rotation.y=heading;
+   r.pivot.rotation.set(0,0,0);
+   r.avatar.animator.update(dt,{speed:0,grounded:true,verticalVelocity:0});
+  }
  }else for(const r of racers){
   if(phase==='finished'){
    release(r);r.vy-=profile.gravity*dt;r.y=Math.max(0,r.y+r.vy*dt);r.root.position.y=r.y+.15;r.pivot.rotation.set(0,0,0);
@@ -149,6 +160,7 @@ function frame(){
   }
   r.avatar?.animator.update(dt,{speed:0,grounded:r.y===0,verticalVelocity:r.vy});
  }
+ for(const r of racers)poseCarryHands(r.root,r.carry?.root.position||null,r.root.rotation.y,dt);
  $('#grab span').textContent=player.carry?'THROW':'GRAB';
  const pose=characterCameraPose(player.root.position,cameraYaw,cameraPitch,7.2);
  camera.position.set(pose.position.x,pose.position.y,pose.position.z);camera.lookAt(pose.target.x,pose.target.y,pose.target.z);camera.updateMatrixWorld();
@@ -158,5 +170,5 @@ function frame(){
  placeEl.textContent=`${sorted.indexOf(player)+1} / 4`;timerEl.textContent=raceTime.toFixed(1)+'s';
  renderer.render(scene,camera);requestAnimationFrame(frame);
 }
-window.__rushReadState=()=>({phase,frames:frameNumber,time:raceTime,yaw:cameraYaw,player:{x:player.root.position.x,y:player.y,z:player.root.position.z,facing:player.root.rotation.y,carry:player.carry?.name,stun:player.stun},racers:racers.map(r=>({name:r.name,base:r.avatar?.root.userData.equipment?.base,clip:r.avatar?.animator.stats?.clip,x:r.root.position.x,y:r.root.position.y,carriedBy:r.carriedBy?.name,z:r.root.position.z})),touch:{...touch}});
+window.__rushReadState=()=>({phase,frames:frameNumber,time:raceTime,yaw:cameraYaw,player:{x:player.root.position.x,y:player.y,z:player.root.position.z,facing:player.root.rotation.y,carry:player.carry?.name,stun:player.stun},racers:racers.map(r=>({name:r.name,base:r.avatar?.root.userData.equipment?.base,clip:r.avatar?.animator.stats?.clip,x:r.root.position.x,y:r.root.position.y,carriedBy:r.carriedBy?.name,z:r.root.position.z,hands:r.root.userData.carryHands})),touch:{...touch}});
 countdown.textContent='Loading characters';frame();loadCharacters().catch(error=>{console.error(error);phase='error';countdown.textContent='Could not load characters';hint.textContent='Please reload to retry';restart.hidden=false;restart.textContent='Reload'});
