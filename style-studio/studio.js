@@ -48,9 +48,10 @@ function choose(category,id){if(!ready)return;const c=categories.find(c=>c.id===
 async function init(){
  // Match the approved empty fit-lab: warm blank backdrop, plain floor and
  // direct soft studio lighting. No podium, reflective room or colour wash.
- scene=new T.Scene();scene.background=new T.Color('#ead4d4');camera=new T.PerspectiveCamera(35,1,.01,100);renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.NoToneMapping;viewport.append(renderer.domElement);
+ scene=new T.Scene();camera=new T.PerspectiveCamera(35,1,.01,100);renderer=new T.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.NoToneMapping;viewport.append(renderer.domElement);
  scene.add(new T.HemisphereLight(0xffffff,0x9c8390,2.5));const key=new T.DirectionalLight(0xffffff,3);key.position.set(3,5,4);scene.add(key);
- const floor=new T.Mesh(new T.PlaneGeometry(30,30),new T.MeshStandardMaterial({color:'#e4caca',roughness:.8}));floor.name='Studio_plain_floor';floor.rotation.x=-Math.PI/2;floor.position.y=-.01;scene.add(floor);
+ // A continuous CSS studio sweep replaces the finite lit plane. This removes
+ // the hard horizon and colour seam without changing any character lighting.
  const loader=new GLTFLoader();const load=async name=>{const g=await loader.loadAsync(ASSETS+name);g.scene.updateMatrixWorld(true);return g};const ids=[2,3333,1,8,26];const loaded=await Promise.all([load('goril-motion-v3.glb'),...ids.map(id=>load('friends/friendsie_'+id+'.glb'))]);const original=loaded[0];ids.forEach((id,i)=>donors.set(id,loaded[i+1]));rig=clone(original.scene);scene.add(rig);rig.traverse(o=>{if(/^(TAC|CICEK)$/.test(o.name))o.visible=false;if(o.isMesh){o.castShadow=true;o.frustumCulled=false}});rig.updateMatrixWorld(true);
  for(const c of categories)for(const item of c.items)if(item.donor)prepared.set(c.id+':'+item.id,buildItem(item));
  const bounds=new T.Box3().setFromObject(rig.getObjectByName('GORIL_KAFA'),true),bodyBox=new T.Box3().setFromObject(rig.getObjectByName('FS_Body'),true);bounds.union(bodyBox);const scale=1.5/(bounds.max.y-bounds.min.y);rig.scale.setScalar(scale);rig.position.y=-bounds.min.y*scale;rig.rotation.y=angle;rig.updateMatrixWorld(true);
