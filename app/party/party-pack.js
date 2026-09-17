@@ -4,6 +4,8 @@
 // Every hook is guarded: a fault here disables the pack and never stops the game.
 // Loaded after app/main.js. Config: window.__partyConfig = {runtime: "<runtime ?v>", carry: "<carry ?v>"}.
 import * as THREE from 'three';
+import {playerSettings as settings,savePlayerSettings as saveSettings} from '../player-settings.js';
+import {installPlayerSettings} from './settings-panel.js';
 import { createPartyAudio } from './party-audio.js?v=audio-2';
 
 const BASE = new URL('../../', import.meta.url).pathname.replace(/\/$/, '');
@@ -24,9 +26,6 @@ function guard(fn) {
 }
 
 // ---------- settings ----------
-const SETTINGS_KEY = '67park-party';
-const settings = Object.assign({sfx: 0.8, haptics: true, pads: true, juice: true}, (() => { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch { return {}; } })());
-function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {} }
 const gameMuted = () => { try { return localStorage.getItem('67park-muted') === '1'; } catch { return false; } };
 
 // ---------- sound (synthesized, no files) ----------
@@ -536,31 +535,7 @@ function installEggyButtons() {
 }
 
 // ---------- settings panel ----------
-function installSettings() {
-  // Plain text pill in the top-right HUD column, under the online and friends pills (no icon).
-  const gear = document.createElement('button');
-  gear.id = 'party-settings-btn'; gear.type = 'button'; gear.textContent = 'Settings'; gear.setAttribute('aria-label', 'Party settings'); gear.setAttribute('aria-expanded', 'false');
-  const panel = document.createElement('div'); panel.id = 'party-settings'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Party settings'); panel.hidden = true;
-  const row = (label, control) => `<div class="party-row"><span>${label}</span>${control}</div>`;
-  const toggle = (key, label) => row(label, `<button type="button" class="party-toggle" data-key="${key}" role="switch" aria-checked="${settings[key] ? 'true' : 'false'}" aria-label="${label}"><i></i></button>`);
-  panel.innerHTML = `<div class="party-card"><div class="party-head"><strong>Party settings</strong><button type="button" class="party-close" aria-label="Close">&times;</button></div>
-    ${row('Sound effects', `<input type="range" min="0" max="100" value="${Math.round(settings.sfx * 100)}" data-key="sfx" aria-label="Sound effects volume">`)}
-    ${toggle('juice', 'Bouncy moves')}
-    ${toggle('pads', 'Jump pads')}
-    ${isTouch ? toggle('haptics', 'Vibration') : ''}
-    <div class="party-hint">${isTouch ? 'Punch with the Punch button. Grab a player with Interact, then Throw.' : 'Punch: F. Grab a player: E. Throw them: T. Jump pads launch you high.'}</div>
-    <div class="party-foot">67 Park party pack ${VERSION}</div></div>`;
-  document.body.append(gear, panel);
-  const open = v => { panel.hidden = !v; gear.setAttribute('aria-expanded', v ? 'true' : 'false'); sfx.play('click'); };
-  gear.addEventListener('click', () => { sfx.ensure(); open(panel.hidden); });
-  panel.querySelector('.party-close').addEventListener('click', () => open(false));
-  panel.addEventListener('click', ev => { if (ev.target === panel) open(false); });
-  const slider = panel.querySelector('input[data-key=sfx]');
-  slider.addEventListener('input', ev => { sfx.ensure(); sfx.setVolume((+ev.target.value) / 100); });
-  slider.addEventListener('change', () => sfx.play('jump'));
-  for (const b of panel.querySelectorAll('.party-toggle')) b.addEventListener('click', () => { const k = b.dataset.key; settings[k] = !settings[k]; b.setAttribute('aria-checked', settings[k] ? 'true' : 'false'); saveSettings(); sfx.play('click'); });
-  window.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !panel.hidden) open(false); });
-}
+function installSettings(){return installPlayerSettings({sfx,isTouch})}
 
 try { installSettings(); installControls(); log('ready', VERSION, 'base', BASE, 'touch', isTouch); }
 catch (e) { disabled = true; log('install failed', e); }

@@ -101,6 +101,8 @@ export function createPartyAudio({settings, saveSettings, gameMuted, host = wind
   host.addEventListener('pagehide', () => { blocked = true; quiet(); });
   host.addEventListener('pageshow', () => { blocked = false; volume(); });
   host.addEventListener('storage', quiet);
+  host.addEventListener('park:settings-change',volume);
+  host.addEventListener('park:audio-mute-change',quiet);
   return {
     ensure, play,
     state: () => ctx?.state || 'none',
