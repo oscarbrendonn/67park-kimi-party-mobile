@@ -15,5 +15,5 @@ export function openPlayerStudio(equip,openWardrobe) {
   if(equip.base!=='goril') { openWardrobe(true); return; }
   const root=new URL('../',import.meta.url);
   try { sessionStorage.setItem('67park.studio-return.'+root.pathname,location.pathname+location.search); } catch {}
-  location.assign(new URL('style-studio/?from=profile&v=4',root));
+  location.assign(new URL('style-studio/?from=profile&v=5',root));
 }
