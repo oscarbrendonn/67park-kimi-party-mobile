@@ -76,6 +76,7 @@ window.__partyStep = guard((body, input, dt, map) => {
 });
 window.__partyVisual = guard((group, dt) => {
   carryApi?.updateLocalCarryHands?.(group,dt);
+  if(player.map==='city') world()?.parkSwimVisual?.(group);
   player.visual = group || null;
   dt = clamp(finite(dt) ? dt : 0, 0, 0.05);
   const st = state();

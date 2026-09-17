@@ -1,6 +1,4 @@
-import './lane-rush-panel.js?v=rush-1';
-import{applySmallParkPool}from'../island/small-park-pool-v1.js?v=pool-1';
-import{applyParkWaterSurface}from'./park-water-surface.js?v=park-water-3';
+import{applyParkWaterSurface}from'./park-water-surface.js?v=park-water-4';
 const notice=document.createElement('aside');
 notice.id='github-preview-notice';notice.setAttribute('role','status');notice.textContent='Online test · Connecting…';
 const sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href=new URL('./responsive-shell.css?v=mobile-29',import.meta.url).href;document.head.append(sheet);document.body.append(notice);
@@ -23,5 +21,5 @@ let timer=setInterval(update,1000);
 window.addEventListener('pagehide',()=>{clearInterval(timer);timer=null;});
 window.addEventListener('pageshow',()=>{update();if(timer===null)timer=setInterval(update,1000);});
 const poolDeadline=performance.now()+180000;
-const installPool=()=>{const world=window.__islandWorld;if(world?.ready&&world.terrain){const result=applySmallParkPool(world.terrain);world.smallParkPool=result;world.renderer?.domElement&&(world.renderer.domElement.dataset.smallParkPool=JSON.stringify(result));try{applyParkWaterSurface(world)}catch(error){console.error(error)}return}if(performance.now()<poolDeadline)setTimeout(installPool,120)};
+const installPool=()=>{const world=window.__islandWorld;if(world?.ready&&world.terrain){try{applyParkWaterSurface(world)}catch(error){console.error(error)}return}if(performance.now()<poolDeadline)setTimeout(installPool,120)};
 installPool();
