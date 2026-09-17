@@ -1,4 +1,15 @@
-# Style Studio preview 4 / profile entry
+# Style Studio preview 5 / shared lighting
+
+Both desktop/mobile and both studio renderers now use `app/studio-lighting.js`:
+ACES filmic, sRGB, exposure 1, ambient .62 and white key 1.55. These match the
+park renderer's baseline colour/exposure and light intensities, not its dynamic
+time-of-day illumination. Removed the separate wardrobe's extra environment
+reflections and high-intensity studio lights. Character materials, textures,
+geometry, camera framing, cap fit and CSS backdrop are unchanged.
+
+QA: `check-studio-lighting.cjs` compares actual renderer/light values between
+desktop and mobile and exercises Friends profile open/render/return. The existing
+studio test also checks all items, 1000 swaps, persistence and narrow layouts.
 
 2026-09-18: profile navigation now opens this studio for Gorilla 67. Friends
 characters retain their existing in-game equipment editor (studio view), not

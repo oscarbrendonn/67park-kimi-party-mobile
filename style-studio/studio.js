@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
+import {configureStudioLighting} from '../app/studio-lighting.js?v=1';
 
 const ASSETS='https://oscarbrendonn.github.io/67park-kimi-party/models/';
 const STORAGE='67park.style-studio.v1';
@@ -50,8 +51,7 @@ function choose(category,id){if(!ready)return;const c=categories.find(c=>c.id===
 async function init(){
  // Match the approved empty fit-lab: warm blank backdrop, plain floor and
  // direct soft studio lighting. No podium, reflective room or colour wash.
- scene=new T.Scene();camera=new T.PerspectiveCamera(35,1,.01,100);renderer=new T.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.NoToneMapping;viewport.append(renderer.domElement);
- scene.add(new T.HemisphereLight(0xffffff,0x9c8390,2.5));const key=new T.DirectionalLight(0xffffff,3);key.position.set(3,5,4);scene.add(key);
+ scene=new T.Scene();camera=new T.PerspectiveCamera(35,1,.01,100);renderer=new T.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));configureStudioLighting(renderer,scene,T);viewport.append(renderer.domElement);
  // A continuous CSS studio sweep replaces the finite lit plane. This removes
  // the hard horizon and colour seam without changing any character lighting.
  const loader=new GLTFLoader();const load=async name=>{const g=await loader.loadAsync(ASSETS+name);g.scene.updateMatrixWorld(true);return g};const ids=[2,3333,1,8,26];const loaded=await Promise.all([load('goril-motion-v3.glb'),...ids.map(id=>load('friends/friendsie_'+id+'.glb'))]);const original=loaded[0];ids.forEach((id,i)=>donors.set(id,loaded[i+1]));rig=clone(original.scene);scene.add(rig);rig.traverse(o=>{if(/^(TAC|CICEK)$/.test(o.name))o.visible=false;if(o.isMesh){o.castShadow=true;o.frustumCulled=false}});rig.updateMatrixWorld(true);
