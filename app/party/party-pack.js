@@ -1,5 +1,6 @@
 import {createParkLaunchers} from "./park-launchers.js?v=1";
 import {createParkSocialToys} from "./park-social-toys.js?v=1";
+import {installSkateRailFinish} from './skate-rail-finish.js?v=1';
 // 67 Park party pack. Adds an Eggy Party style feel on top of the island without touching its
 // systems: springy jump and landing squash, punches and throws that reach other players, a
 // jump pads, park bots that fly when punched, synthesized sounds, haptics and a settings panel.
@@ -72,6 +73,7 @@ window.__partyStep = guard((body, input, dt, map) => {
   previousHeld = held;
   toys.step(body,input,dt,map==='city'&&!!world());
   if (map !== 'city' || !world()) return;
+  if(world().ready&&!world().skateRailFinish)installSkateRailFinish(world());
   items.step(body, dt);
   stepRings(dt);
   remotePops.step(dt);
