@@ -435,9 +435,9 @@ function installControls() {
 
 // ---------- settings panel ----------
 function installSettings() {
+  // Plain text pill in the top-right HUD column, under the online and friends pills (no icon).
   const gear = document.createElement('button');
-  gear.id = 'party-gear'; gear.type = 'button'; gear.setAttribute('aria-label', 'Party settings'); gear.setAttribute('aria-expanded', 'false');
-  gear.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/></svg>';
+  gear.id = 'party-settings-btn'; gear.type = 'button'; gear.textContent = 'Settings'; gear.setAttribute('aria-label', 'Party settings'); gear.setAttribute('aria-expanded', 'false');
   const panel = document.createElement('div'); panel.id = 'party-settings'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Party settings'); panel.hidden = true;
   const row = (label, control) => `<div class="party-row"><span>${label}</span>${control}</div>`;
   const toggle = (key, label) => row(label, `<button type="button" class="party-toggle" data-key="${key}" role="switch" aria-checked="${settings[key] ? 'true' : 'false'}" aria-label="${label}"><i></i></button>`);

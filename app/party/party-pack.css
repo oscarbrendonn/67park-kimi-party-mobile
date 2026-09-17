@@ -1,8 +1,9 @@
 /* 67 Park party pack: candy style controls that match the park's glass buttons. */
-#party-gear{position:fixed;top:calc(var(--preview-top,24px) + 10px);left:160px;z-index:60;width:34px;height:34px;border-radius:50%;border:2px solid #fff9;background:#f4c7d4;color:#493e45;box-shadow:0 3px 0 #b596a2;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:transform 140ms ease-out}
-#party-gear svg{width:20px;height:20px}
-#party-gear:active{transform:translateY(3px);box-shadow:0 1px 0 #b596a2}
-#party-gear[aria-expanded="true"]{background:#fff0f5}
+#party-settings-btn{position:fixed;top:calc(var(--preview-top,24px) + 122px);right:16px;z-index:60;padding:6px 14px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.75);color:#3f4650;font:700 12px/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.06);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);cursor:pointer;transition:transform 140ms ease-out}
+#party-settings-btn:active{transform:scale(.94)}
+#party-settings-btn[aria-expanded="true"]{background:#fff0f5}
+/* The original clock pill shows the season and the weather as two icons; in summer with clear skies both are suns. Keep only the weather icon here. */
+.park-weather>span:first-child{display:none}
 .party-btn{position:fixed;right:130px;bottom:calc(280px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:center;gap:8px;padding:12px 16px;border:2px solid #fff9;border-radius:20px;background:#cfe9ff;color:#3b4a5a;box-shadow:0 4px 0 #8fb2cf;font:700 15px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.02em;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .party-btn svg{width:22px;height:22px}
 .party-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #8fb2cf}
@@ -21,5 +22,5 @@
 .party-toggle[aria-checked="true"] i{left:26px}
 .party-hint{margin-top:10px;padding:10px 12px;border-radius:14px;background:#fff0f5;font-size:13px;color:#6b5a64}
 .party-foot{margin-top:8px;font-size:11px;color:#a08e9a;text-align:right}
-@media (pointer:coarse){#party-gear{top:calc(var(--preview-top,24px) + 76px);left:140px;width:36px;height:36px}}
+@media (pointer:coarse){#party-settings-btn{top:calc(var(--preview-top,24px) + 160px);right:12px}}
 @media (max-width:480px){.party-btn{right:118px;padding:11px 14px;font-size:14px}}
