@@ -75,6 +75,7 @@ window.__partyStep = guard((body, input, dt, map) => {
   botFlights.step();
 });
 window.__partyVisual = guard((group, dt) => {
+  carryApi?.updateLocalCarryHands?.(group,dt);
   player.visual = group || null;
   dt = clamp(finite(dt) ? dt : 0, 0, 0.05);
   const st = state();

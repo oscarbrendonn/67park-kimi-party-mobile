@@ -1,5 +1,6 @@
 // Egg Party-style carry interaction. One small state machine owns both ambient
 // bots and online avatars so repeated taps cannot queue work or freeze a frame.
+import {poseCarryHands} from './carry-hand-pose.js?v=carry-hands-1';
 const botControllers = new Set();
 const remotes = new Map();
 
@@ -7,15 +8,32 @@ let localId = '';
 let targetId = '';
 let pose = {x:0,y:0,z:0,heading:0,valid:false};
 let lastToggle = -Infinity;
+let localLift = null;
 
 const finite = value => Number.isFinite(value);
 const validPoint = point => point && finite(point.x) && finite(point.y) && finite(point.z);
 const now = () => typeof performance === 'object' ? performance.now() : Date.now();
 const heldPoint = (carrier, heading) => ({
-  x: carrier.x + Math.sin(heading) * .72,
-  y: carrier.y + 1.05,
-  z: carrier.z + Math.cos(heading) * .72,
+  x: carrier.x + Math.sin(heading) * .36,
+  y: carrier.y + .04,
+  z: carrier.z + Math.cos(heading) * .36,
 });
+const lifted = (from,to,started) => {
+  const t=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(now()-started)/200));
+  const w=t*t*(3-2*t);
+  return {x:from.x+(to.x-from.x)*w,y:from.y+(to.y-from.y)*w,z:from.z+(to.z-from.z)*w};
+};
+
+export function updateLocalCarryHands(root,dt) {
+  let point=null;
+  if(targetId && pose.valid) {
+    const target=remotes.get(targetId)?.root;
+    point=target?{x:target.position.x,y:target.position.y-.555,z:target.position.z}:heldPoint(pose,pose.heading);
+  } else for(const controller of botControllers) if(controller.hasPassenger()) {
+    point=controller.passengerPoint();break;
+  }
+  poseCarryHands(root,point,pose.heading,dt);
+}
 
 export function setCarryLocalId(id) {
   localId = typeof id === 'string' ? id : '';
@@ -52,6 +70,10 @@ export function toggleParkCarry() {
   const stamp = now();
   if (stamp-lastToggle < 220 || !pose.valid) return false;
   if (targetId) { targetId=''; lastToggle=stamp; return true; }
+  // Release an existing bot before looking for an online player nearby.
+  for (const c of botControllers) if(c.hasPassenger()) {
+    c.toggle(pose,pose.heading); lastToggle=stamp; return true;
+  }
   const online = nearestRemote();
   if (online) { targetId=online; lastToggle=stamp; return true; }
   for (const controller of botControllers) {
@@ -62,7 +84,7 @@ export function toggleParkCarry() {
 
 export function registerRemoteCarryAvatar(id) {
   const key = String(id||'');
-  const entry = {root:null,carryTarget:''};
+  const entry = {root:null,carryTarget:'',lift:null};
   if (key) remotes.set(key,entry);
   return {
     update(root,remote) {
@@ -76,9 +98,18 @@ export function registerRemoteCarryAvatar(id) {
       }
       if (carrier) {
         const p=heldPoint(carrier,heading);
-        root.position.set(p.x,p.y,p.z);
+        if(!entry.lift) entry.lift={from:{...root.position},started:now()};
+        const smooth=lifted(entry.lift.from,{x:p.x,y:p.y+.555,z:p.z},entry.lift.started);
+        root.position.set(smooth.x,smooth.y,smooth.z);
         root.rotation.set(-.12,heading,0);
-      }
+      } else entry.lift=null;
+    },
+    visual(root,dt) {
+      if (!root) return;
+      const p=root.position,heading=root.rotation.y;
+      const target=remotes.get(entry.carryTarget)?.root;
+      const point=target?{x:target.position.x,y:target.position.y-.555,z:target.position.z}:heldPoint(p,heading);
+      poseCarryHands(root,entry.carryTarget?point:null,heading,dt);
     },
     dispose(){ if(remotes.get(key)===entry) remotes.delete(key); if(targetId===key)targetId=''; }
   };
@@ -88,18 +119,21 @@ export function applyLocalCarry(body, position) {
   if (!localId || !body || !validPoint(position)) return false;
   let carrier = null;
   for (const entry of remotes.values()) if (entry.carryTarget===localId && entry.root) {carrier=entry.root;break;}
-  if (!carrier) return false;
+  if (!carrier) {localLift=null;return false;}
   const p=heldPoint(carrier.position,carrier.rotation.y);
+  if(!localLift || localLift.carrier!==carrier) localLift={carrier,from:{...position},started:now()};
+  const smooth=lifted(localLift.from,{x:p.x,y:p.y+.555,z:p.z},localLift.started);
   try {
     body.setLinvel?.({x:0,y:0,z:0},true);
-    body.setTranslation?.({x:p.x,y:p.y+.555,z:p.z},true);
+    body.setTranslation?.(smooth,true);
   } catch { return false; }
-  position.x=p.x; position.y=p.y+.555; position.z=p.z;
+  position.x=smooth.x; position.y=smooth.y; position.z=smooth.z;
   return true;
 }
 
 export function createParkBotCarryController({actors}) {
   let carried=null, disposed=false;
+  let pickup=null,point=null;
   const delays=new Map();
   const controller={
     toggle(player,heading){
@@ -114,11 +148,11 @@ export function createParkBotCarryController({actors}) {
         nearest=d;target=actor;
       }
       if(!target)return false;
-      carried=target;target.entry.carryPhase='held';return true;
+      carried=target;pickup={from:{...target.root.position},started:now()};point={...target.root.position};target.entry.carryPhase='held';return true;
     },
     sample(actor,sample){
       if(actor!==carried||!pose.valid)return sample;
-      const p=heldPoint(pose,pose.heading);
+      const p=lifted(pickup.from,heldPoint(pose,pose.heading),pickup.started);point=p;
       return {...sample,position:p,velocity:{x:0,y:0,z:0},speed:0,heading:pose.heading,hitTiltX:-.12,hitTiltZ:0};
     },
     routeTime(actor,clock,dt){
@@ -126,6 +160,8 @@ export function createParkBotCarryController({actors}) {
       return clock-(delays.get(actor)||0);
     },
     isCarried(actor){return actor===carried;},
+    hasPassenger(){return !!carried;},
+    passengerPoint(){return carried?point:null;},
     dispose(){disposed=true;if(carried)carried.entry.carryPhase='released';carried=null;delays.clear();botControllers.delete(controller);}
   };
   botControllers.add(controller);
