@@ -1,4 +1,5 @@
 import {createParkLaunchers} from "./park-launchers.js?v=1";
+import {createParkSocialToys} from "./park-social-toys.js?v=1";
 // 67 Park party pack. Adds an Eggy Party style feel on top of the island without touching its
 // systems: springy jump and landing squash, punches and throws that reach other players, a
 // jump pads, park bots that fly when punched, synthesized sounds, haptics and a settings panel.
@@ -7,7 +8,7 @@ import {createParkLaunchers} from "./park-launchers.js?v=1";
 import * as THREE from 'three';
 import {playerSettings as settings,savePlayerSettings as saveSettings} from '../player-settings.js';
 import {installPlayerSettings} from './settings-panel.js';
-import { createPartyAudio } from './party-audio.js?v=audio-2';
+import { createPartyAudio } from './party-audio.js?v=toys-1';
 
 const BASE = new URL('../../', import.meta.url).pathname.replace(/\/$/, '');
 const CFG = Object.assign({runtime: '', carry: ''}, (typeof window !== 'undefined' && window.__partyConfig) || {});
@@ -69,6 +70,7 @@ window.__partyStep = guard((body, input, dt, map) => {
   const held = heldId();
   if (held && !previousHeld) sfx.play('grab');
   previousHeld = held;
+  toys.step(body,input,dt,map==='city'&&!!world());
   if (map !== 'city' || !world()) return;
   items.step(body, dt);
   stepRings(dt);
@@ -77,6 +79,7 @@ window.__partyStep = guard((body, input, dt, map) => {
 });
 window.__partyVisual = guard((group, dt) => {
   carryApi?.updateLocalCarryHands?.(group,dt);
+  toys.visual(group,dt);
   if(player.map==='city') world()?.parkSwimVisual?.(group);
   player.visual = group || null;
   dt = clamp(finite(dt) ? dt : 0, 0, 0.05);
@@ -128,16 +131,17 @@ const netHook = (() => {
       if (typeof ev.data !== 'string' || ev.data.indexOf('"pk1') < 0) return;
       let m; try { m = JSON.parse(ev.data); } catch { return; }
       if (m?.t !== 's' || typeof m.e !== 'string' || !m.e.startsWith('pk1')) return;
-      guard(hits.receive)(m);
+      if(m.e.startsWith('pk1t:'))guard(toys.receive)(m);else guard(hits.receive)(m);
     });
     if (!sock.__partySend) {
       sock.__partySend = true;
       const raw = sock.send.bind(sock);
       sock.send = data => {
         try {
-          if (outgoing && typeof data === 'string' && data.startsWith('{"t":"s"')) {
+          if (typeof data === 'string' && data.startsWith('{"t":"s"')) {
             if (performance.now() > until) outgoing = null;
-            else { const o = JSON.parse(data); o.e = outgoing; data = JSON.stringify(o); }
+            const flag=outgoing||toys.packet();
+            if(flag){ const o = JSON.parse(data); o.e = flag; data = JSON.stringify(o); }
           }
         } catch {}
         return raw(data);
@@ -343,6 +347,9 @@ function stepRings(dt) {
 }
 
 // ---------- bounded city hatches and park trampolines ----------
+const toys = createParkSocialToys({world,scene,state,net,settings,sfx,send:(tag,ms)=>netHook.flag(tag,ms),reducedMotion,carrying:heldId,
+ blocked:()=>document.hidden||!!document.querySelector('.wardrobe,dialog[open],#party-settings:not([hidden])')||!!window.__candy?.state?.().mounted});
+window.__parkToyInteract=()=>toys.interact();
 const items = createParkLaunchers({world,scene,state,settings,reducedMotion,remotes:()=>net()?.remotes,
  blocked:()=>document.hidden||!!document.querySelector('.wardrobe,dialog[open],#party-settings:not([hidden])'),
  onLaunch(){if(settings.juice&&!reducedMotion())kick(.28);sfx.play('pad');buzz([15,30,25]);}
@@ -438,6 +445,6 @@ function installSettings(){return installPlayerSettings({sfx,isTouch})}
 
 try { installSettings(); installControls(); log('ready', VERSION, 'base', BASE, 'touch', isTouch); }
 catch (e) { disabled = true; log('install failed', e); }
-window.__party = {version: VERSION, settings, sfx, hits, netHook, botFlights, botsInFront, audio: () => sfx.state(),
+window.__party = {version: VERSION, settings, sfx, hits, netHook, botFlights, botsInFront, toys, audio: () => sfx.state(),
   status: () => ({disabled, runtime: !!stateApi, carry: !!carryApi, spring: spring.v, map: player.map, ...items.count()}),
   debug: () => { const t = player.body?.translation?.(); const st = state(); return {...items.debug(), player: t ? {x: t.x, y: t.y, z: t.z} : null, state: st ? {grounded: st.grounded, speed: st.speed, vy: st.verticalVelocity, punchT: st.punchT, shake: st.shake, enabled: st.enabled} : null, id: net()?.id || null, remotes: net()?.remotes?.size ?? null}; }};

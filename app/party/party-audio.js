@@ -2,7 +2,7 @@
 export function createPartyAudio({settings, saveSettings, gameMuted, host = window}) {
   let ctx, master, compressor, noise, blocked = false;
   const voices = new Set(), last = new Map(), counts = {};
-  const limits = {step: 90, jump: 140, double: 140, land: 100, swing: 150, hit: 100, pad: 250, grab: 150, throw: 150, click: 60, stars: 350};
+  const limits = {step: 90, jump: 140, double: 140, land: 100, swing: 150, hit: 100, pad: 250, grab: 150, throw: 150, click: 60, stars: 350, note:80};
   const audible = () => ctx?.state === 'running' && !host.document.hidden && !blocked && !gameMuted() && settings.sfx > 0;
   const volume = () => {
     if (ctx && master) master.gain.setTargetAtTime(audible() ? Math.min(1, Math.max(0, Number(settings.sfx) || 0)) * 0.65 : 0, ctx.currentTime, 0.025);
@@ -48,6 +48,11 @@ export function createPartyAudio({settings, saveSettings, gameMuted, host = wind
     source.start(start); source.stop(end + 0.01);
   }
   const recipes = {
+    note(index) {
+      const f=[261.63,293.66,329.63,392,440,523.25][index];if(!f)return;
+      voice({type:'sine',from:f,to:f,duration:.42,gain:.16});
+      voice({type:'sine',from:f*2,to:f*2,duration:.20,gain:.025});
+    },
     step(left, p) {
       voice({noiseBand:'lowpass', from:left ? 750 : 640, duration:0.065, gain:0.13, pitch:p});
       voice({from:left ? 145 : 130, to:65, duration:0.055, gain:0.08, pitch:p});
@@ -85,8 +90,9 @@ export function createPartyAudio({settings, saveSettings, gameMuted, host = wind
     try {
       if (!audible() || !recipes[name]) return;
       const now = ctx.currentTime * 1000;
-      if (now - (last.get(name) ?? -Infinity) < (limits[name] ?? 80)) return;
-      last.set(name, now); volume();
+      const rateKey=name==='note'?'note:'+Math.max(0,Math.min(5,Math.trunc(Number(arg)||0))):name;
+      if (now - (last.get(rateKey) ?? -Infinity) < (limits[name] ?? 80)) return;
+      last.set(rateKey, now); volume();
       recipes[name](arg, 0.96 + Math.random() * 0.08);
       counts[name] = (counts[name] || 0) + 1;
     } catch {} // Sound synthesis never escapes into the simulation.
