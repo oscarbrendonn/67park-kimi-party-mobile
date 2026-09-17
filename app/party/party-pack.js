@@ -244,7 +244,7 @@ const hits = (() => {
         sfx.play('hit'); buzz(25); fxRing(v.q, '#ffd54a'); remotePops.pop(v.id);
         return;
       }
-      const bots = botsInFront(p, st.heading, 2.2, 0.45);
+      const bots = botsInFront(p, st.heading, 3.2, 0.3); // wider than the player range: the game's own strike has already pushed the bot back this frame
       if (bots.length) { sfx.play('hit'); buzz(18); fxRing([bots[0].x, bots[0].y, bots[0].z], '#ffd54a'); botFlights.launch(bots[0], st.heading); st.shake = Math.max(st.shake || 0, 0.3); }
     },
     throwHeld() {
