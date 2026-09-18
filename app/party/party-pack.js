@@ -1,5 +1,5 @@
 import {createParkLaunchers} from "./park-launchers.js?v=1";
-import {createParkSocialToys} from "./park-social-toys.js?v=drive-anywhere-1";
+import {createParkSocialToys} from "./park-social-toys.js?v=balloon-lift-2";
 import {installSkateRailFinish} from './skate-rail-finish.js?v=1';
 // 67 Park party pack. Adds an Eggy Party style feel on top of the island without touching its
 // systems: springy jump and landing squash, punches and throws that reach other players, a

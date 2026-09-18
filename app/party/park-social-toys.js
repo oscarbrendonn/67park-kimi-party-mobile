@@ -5,7 +5,7 @@ import {applyBalloonGrip} from './balloon-grip.js?v=1';
 const finite=Number.isFinite,clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const point=p=>p&&[p.x,p.y,p.z].every(finite);
 const dist=(p,q)=>Math.hypot(p.x-q.x,p.z-q.z);
-export const TOY_RULES=Object.freeze({rideSeconds:3.5,rideHeight:4.2,glideSeconds:6,fallSpeed:2.2,seesawSpeed:10.5});
+export const TOY_RULES=Object.freeze({rideSeconds:5.5,rideHeight:8,glideSeconds:6,fallSpeed:2.2,seesawSpeed:10.5});
 export function validToySite(w,x,z,rx,rz){
  let base=w.ground(x,z);if(!finite(base))return false;
  for(let i=-2;i<=2;i++)for(let j=-1;j<=1;j++){
@@ -90,7 +90,7 @@ export function createParkSocialToys({world,scene,state,net,settings,sfx,send,bl
    lastSide=side;previousY=p.y;
    const i=noteAt(p),m=musicSite(),contact=m&&i>=0&&p.y-m.y<.95&&p.y-m.y>.35&&v.y<=.8;if(contact){if(i!==note&&playNote(i))emit('n',i);note=i;}else note=-1;
   }else{armedSide=0;note=-1;}
-  if(flight){const b=balloonSite();if(!eligible||!b||dist(p,flight)>1.8||p.y<flight.base-1||p.y>flight.base+6){release();}else if(input?.jumpQueued){input.jumpQueued=false;release();}else{
+  if(flight){const b=balloonSite();if(!eligible||!b||dist(p,flight)>1.8||p.y<flight.base-1||p.y>flight.base+TOY_RULES.rideHeight+1.8){release();}else if(input?.jumpQueued){input.jumpQueued=false;release();}else{
     flight.age+=dt;if(flight.age>=TOY_RULES.rideSeconds)release();else{const t=flight.age/TOY_RULES.rideSeconds,y=flight.base+TOY_RULES.rideHeight*Math.sin(t*Math.PI/2);body.setTranslation({x:flight.x,y,z:flight.z},true);body.setLinvel({x:0,y:1,z:0},true);Object.assign(st,{grounded:false,hover:false,airT:0,speed:0,verticalVelocity:1,fallPeak:0});input.x=input.z=0;input.run=false;}}
   }
   if(glide&&point(p)&&point(v)){glide.age+=dt;const g=groundNear(p);if(!st?.enabled||glide.age>TOY_RULES.glideSeconds||finite(g)&&p.y-g<.7&&v.y<=0)glide=null;else if(v.y<-TOY_RULES.fallSpeed){body.setLinvel({x:v.x,y:-TOY_RULES.fallSpeed,z:v.z},true);st.verticalVelocity=-TOY_RULES.fallSpeed;st.hover=false;st.fallPeak=0;}}
