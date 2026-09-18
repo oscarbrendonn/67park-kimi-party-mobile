@@ -1,4 +1,4 @@
-import {applyMapContinuity} from '../app/map-continuity.js?v=map-59';
+import {applyMapContinuity} from '../app/map-continuity.js?v=seams-1';
 import {styleParkBus as __fleetBus38} from "../app/vehicle-branding.js?v=fleet-38";
 import {installParkedFleet as __fleetParked38} from "../app/parked-fleet.js?v=release-40";
 import {applyKimiCoast20} from '/67park-kimi-party-mobile/app/kimi-coast20.js?v=coast-24';

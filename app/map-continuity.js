@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {sealTerrainSeams} from './terrain-seam-repair.js?v=seams-1';
 // Baked shared-edge retopology. Existing meshes/materials are reused; nothing
 // is layered over the old top faces, so no coplanar paint flicker is introduced.
 export function applyMapContinuity(root,patch){
@@ -19,5 +20,6 @@ export function applyMapContinuity(root,patch){
   next.setIndex(ix);next.computeBoundingBox();next.computeBoundingSphere();added.dispose();prepared.push({mesh,next});
  }
  for(const {mesh,next}of prepared)mesh.geometry=next;
+ sealTerrainSeams(root);
  return root.userData.mapContinuity={...patch.metrics,materialsPreserved:true};
 }
