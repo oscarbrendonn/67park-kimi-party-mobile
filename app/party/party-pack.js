@@ -1,4 +1,6 @@
 import {createParkLaunchers} from "./park-launchers.js?v=1";
+import {createHousing} from '../housing.js?v=homes-1';
+import '../chat-send-focus.js?v=homes-1';
 import {createParkSocialToys} from "./park-social-toys.js?v=balloon-lift-2";
 import {installSkateRailFinish} from './skate-rail-finish.js?v=1';
 // 67 Park party pack. Adds an Eggy Party style feel on top of the island without touching its
@@ -37,6 +39,8 @@ const buzz = pattern => { if (!settings.haptics || !isTouch) return; try { navig
 
 // ---------- world access ----------
 const player = {body: null, visual: null, map: 'city'};
+const housing = createHousing();
+window.__parkHousing = housing;
 const world = () => window.__islandWorld || null;
 const scene = () => window.__eggyScene || null;
 const net = () => window.__eggyNet || null;
@@ -64,6 +68,7 @@ let previousHeld = '';
 // ---------- hooks called by main.js ----------
 window.__partyStep = guard((body, input, dt, map) => {
   player.body = body || null; player.map = map;
+  housing.step(body,input,dt,map);
   dt = clamp(finite(dt) ? dt : 0, 0, 0.05);
   netHook.step();
   knockStep(dt);
@@ -351,7 +356,7 @@ function stepRings(dt) {
 // ---------- bounded city hatches and park trampolines ----------
 const toys = createParkSocialToys({world,scene,state,net,settings,sfx,send:(tag,ms)=>netHook.flag(tag,ms),reducedMotion,carrying:heldId,
  blocked:()=>document.hidden||!!document.querySelector('.wardrobe,dialog[open],#party-settings:not([hidden])')||!!window.__candy?.state?.().mounted});
-window.__parkToyInteract=()=>toys.interact();
+window.__parkToyInteract=()=>housing.interact()||toys.interact();
 const items = createParkLaunchers({world,scene,state,settings,reducedMotion,remotes:()=>net()?.remotes,
  blocked:()=>document.hidden||!!document.querySelector('.wardrobe,dialog[open],#party-settings:not([hidden])'),
  onLaunch(){if(settings.juice&&!reducedMotion())kick(.28);sfx.play('pad');buzz([15,30,25]);}
